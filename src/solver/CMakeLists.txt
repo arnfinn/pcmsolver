@@ -6,7 +6,7 @@ list(APPEND sources_list CPCMSolver.cpp IEFSolver.cpp SolverImpl.cpp ddPCM.cpp)
 
 add_library(solver OBJECT ${sources_list} ${headers_list})
 set_target_properties(solver PROPERTIES POSITION_INDEPENDENT_CODE 1 )
-add_dependencies(solver generate-config-hpp)
+add_dependencies(solver generate-config-hpp ddpcm)
 target_compile_options(solver PRIVATE "$<$<CONFIG:DEBUG>:${EXDIAG_CXX_FLAGS}>")
 # Sets install directory for all the headers in the list
 foreach(_header ${headers_list})

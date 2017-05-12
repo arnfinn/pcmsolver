@@ -31,6 +31,15 @@ namespace pcm {
 namespace solver {
 ddPCM::ddPCM(const Molecule & m) : nSpheres_(m.spheres().size()), molecule_(m) {
   int ncav = 0;
+  int ngrid = 110;
+  int lmax = 6;
+  int iconv = 7;
+  int igrad = 0;
+  int iprint = 2;
+  int nproc = 1;
+  double eps = 78.39;
+  double eta = 0.1;
+
   nSpheres_ = m.spheres().size();
   double * xs = new double[nSpheres_];
   double * ys = new double[nSpheres_];
@@ -42,7 +51,7 @@ ddPCM::ddPCM(const Molecule & m) : nSpheres_(m.spheres().size()), molecule_(m) {
     zs[i] = m.spheres(i).center(2);
     rs[i] = m.spheres(i).radius;
   }
-  ddinit(&nSpheres_, xs, ys, zs, rs, &ncav);
+  ddinit(&iprint, &nproc, &lmax, &ngrid, &iconv, &igrad, &eps, &eta, &nSpheres_, xs, ys, zs, rs, &ncav);
   cavity_ = Eigen::Matrix3Xd::Zero(3, ncav);
   copy_cavity(cavity_.data());
   delete[] xs;

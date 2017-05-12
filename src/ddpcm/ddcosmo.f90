@@ -77,22 +77,27 @@ private
 !
 ! Written by Filippo Lipparini, October 2015.
 !
+type, public :: ddPCM_setting
+   integer :: ngrid = 110
+   integer :: lmax = 6
+   integer :: iconv = 7
+   integer :: igrad = 0
+   integer :: iprint = 2
+   integer :: nproc = 1
+   real(8) :: eps = 78.39
+   real(8) :: eta = 0.1
+end type ddPCM_setting
+
+type(ddPCM_setting), public, save :: settings
+
 integer, parameter, public :: ndiis=25, iout=6, nngmax=100
 real(8), parameter, public :: zero=0.d0, pt5=0.5d0, one=1.d0, two=2.d0, four=4.d0
 !
 integer, public :: nsph
-integer, public :: ngrid
 integer, public :: ncav
-integer, public :: lmax
 integer, public :: nbasis
-integer, public :: iconv
-integer, public :: igrad
-integer, public :: iprint
-integer, public :: nproc
 integer, public :: memuse
 integer, public :: memmax
-real(8), public :: eps
-real(8), public :: eta
 real(8) :: pi, sq2
 logical :: grad
 !
@@ -122,13 +127,15 @@ public itsolv_adjoint
 public memfree
 
 contains
-subroutine ddinit(n,x,y,z,rvdw,ncavsize)
+subroutine ddinit(iprint, nproc, lmax, ngrid, iconv, igrad, eps, eta, n, x,y,z,rvdw,ncavsize)
+
 !
 ! allocate the various arrays needed for ddcosmo,
 ! assemble the cavity and the various associated geometrical quantities.
 !
-integer,               intent(in) :: n
-integer,               intent(out) :: ncavsize
+integer,                intent(in) :: iprint, nproc, lmax, ngrid, iconv, igrad, n
+integer,                intent(out) :: ncavsize
+real(8),                intent(in) :: eps, eta
 real(8),  dimension(n), intent(in) :: x, y, z, rvdw
 !
 integer :: isph, jsph, i, ii, lnl, l, ind, m, igrid, inear, jnear
@@ -144,19 +151,19 @@ data ng0/6,14,26,38,50,74,86,110,146,170,194,230,266,302,350,434,590,770,974, &
 !
 ! Defining input parameters by ourselves
 !
-iprint = 2      ! printing flag
-nproc = 1       ! number of openmp threads
-lmax = 6        ! max angular momentum of spherical harmonics basis
-ngrid = 110     ! number of lebedev points
-iconv = 7       ! 10^(-iconv) is the convergence threshold for the iterative solver
-igrad = 0       ! whether to compute (1) or not (0) forces
-eps = 78.39     ! dielectric constant of the solvent
-eta = 0.1       ! regularization parameter
+settings%iprint = iprint ! printing flag
+settings%nproc  = nproc  ! number of openmp threads
+settings%lmax   = lmax   ! max angular momentum of spherical harmonics basis
+settings%ngrid  = ngrid  ! number of lebedev points
+settings%iconv  = iconv  ! 10^(-iconv) is the convergence threshold for the iterative solver
+settings%igrad  = igrad  ! whether to compute (1) or not (0) forces
+settings%eps    = eps    ! dielectric constant of the solvent
+settings%eta    = eta    ! regularization parameter
 !
 ! openMP parallelization:
 !
-! if (nproc.eq.0) nproc = 1
-!$ call omp_set_num_threads(nproc)
+if (settings%nproc.eq.0) settings%nproc = 1
+!$ call omp_set_num_threads(settings%nproc)
 
 pi   = four*atan(one)
 sq2  = sqrt(two)
@@ -173,7 +180,7 @@ do i = 1, nllg
     igrid = i
   end if
 end do
-ngrid = ng0(igrid)
+settings%ngrid = ng0(igrid) ! number of lebedev points
 !
 ! print a nice header:
 !
@@ -182,17 +189,17 @@ call header
 ! allocate:
 !
 grad   = igrad.ne.0
-nbasis = (lmax+1)*(lmax+1)
+nbasis = (settings%lmax+1)*(settings%lmax+1)
 allocate (rsph(nsph),csph(3,nsph))
-allocate (w(ngrid),grid(3,ngrid),basis(nbasis,ngrid))
+allocate (w(settings%ngrid),grid(3,settings%ngrid),basis(nbasis,settings%ngrid))
 allocate (inl(nsph+1),nl(nsph*nngmax))
-allocate (fi(ngrid,nsph),ui(ngrid,nsph))
-if (grad) allocate(zi(3,ngrid,nsph))
-allocate (fact(2*lmax+1),facl(nbasis),facs(nbasis))
+allocate (fi(settings%ngrid,nsph),ui(settings%ngrid,nsph))
+if (grad) allocate(zi(3,settings%ngrid,nsph))
+allocate (fact(2*settings%lmax+1),facl(nbasis),facs(nbasis))
 !
-memuse = memuse + 4*nsph + 4*ngrid + nbasis*ngrid + nsph+1 + nsph*nngmax + &
-         2*ngrid*nsph + 2*lmax+1 + 2*nbasis
-if (grad) memuse = memuse + 3*ngrid*nsph
+memuse = memuse + 4*nsph + 4*settings%ngrid + nbasis*settings%ngrid + nsph+1 + nsph*nngmax + &
+         2*settings%ngrid*nsph + 2*settings%lmax+1 + 2*nbasis
+if (grad) memuse = memuse + 3*settings%ngrid*nsph
 memmax = max(memmax,memuse)
 !
 ! precompute various quantities (diagonal blocks of ddcosmo matrix,
@@ -200,11 +207,11 @@ memmax = max(memmax,memuse)
 !
 fact(1) = one
 fact(2) = one
-do i = 3, 2*lmax + 1
+do i = 3, 2*settings%lmax + 1
   fact(i) = dble(i-1)*fact(i-1)
 end do
 !
-do l = 0, lmax
+do l = 0, settings%lmax
   ind = l*l + l + 1
   fl  = (two*dble(l) + one)/(four*pi)
   ffl = sqrt(fl)
@@ -227,24 +234,24 @@ rsph      = rvdw
 !
 ! load a lebedev grid:
 !
-call ld_by_order(ngrid, grid(1, :), grid(2, :), grid(3, :), w)
+call ld_by_order(settings%ngrid, grid(1, :), grid(2, :), grid(3, :), w)
 ! Scaling because the weights are normalised
 w = 4.0d0*pi*w
 
 !
 ! build a basis of spherical harmonics at the gridpoints:
 !
-allocate (vplm(nbasis),vcos(lmax+1),vsin(lmax+1))
-memuse = memuse + nproc*(nbasis + 2*lmax + 2)
+allocate (vplm(nbasis),vcos(settings%lmax+1),vsin(settings%lmax+1))
+memuse = memuse + settings%nproc*(nbasis + 2*settings%lmax + 2)
 memmax = max(memmax,memuse)
 !$omp parallel do default(shared) private(i,vplm,vcos,vsin)
-do i = 1, ngrid
+do i = 1, settings%ngrid
   call ylmbas(grid(:,i),basis(:,i),vplm,vcos,vsin)
 end do
 !$omp end parallel do
 deallocate (vplm,vcos,vsin)
 !
-memuse = memuse - nproc*(nbasis + 2*lmax + 2)
+memuse = memuse - settings%nproc*(nbasis + 2*settings%lmax + 2)
 !
 ! build a neighbor list:
 !
@@ -273,16 +280,16 @@ ui = zero
 if (grad) zi = zero
 !$omp parallel do default(shared) private(isph,i,ii,jsph,v,vv,t,xt,swthr,fac)
 do isph = 1, nsph
-  do i = 1, ngrid
+  do i = 1, settings%ngrid
     do ii = inl(isph), inl(isph+1) - 1
       jsph = nl(ii)
       v(:)  = csph(:,isph) + rsph(isph)*grid(:,i) - csph(:,jsph)
       vv = sqrt(dot_product(v,v))
       t  = vv/rsph(jsph)
-      xt  = fsw(t,eta*rsph(jsph))
-      swthr  = one - eta*rsph(jsph)
+      xt  = fsw(t,settings%eta*rsph(jsph))
+      swthr  = one - settings%eta*rsph(jsph)
       if (grad .and. (t.lt.one .and. t.gt.swthr)) then
-        fac = dfsw(t,eta*rsph(jsph))/rsph(jsph)
+        fac = dfsw(t,settings%eta*rsph(jsph))/rsph(jsph)
         zi(:,i,isph) = zi(:,i,isph) + fac*v(:)/vv
       end if
       fi(i,isph) = fi(i,isph) + xt
@@ -296,7 +303,7 @@ end do
 !
 ncav = 0
 do isph = 1, nsph
-  do i = 1, ngrid
+  do i = 1, settings%ngrid
     if (ui(i,isph).gt.zero) ncav = ncav + 1
   end do
 end do
@@ -310,7 +317,7 @@ memmax = max(memmax,memuse)
 !
 ii = 0
 do isph = 1, nsph
-  do i = 1, ngrid
+  do i = 1, settings%ngrid
     if (ui(i,isph).gt.zero) then
       ii = ii + 1
       ccav(:,ii) = csph(:,isph) + rsph(isph)*grid(:,i)
@@ -349,9 +356,9 @@ if(allocated(ui))    deallocate(ui)
 if(allocated(fi))    deallocate(fi)
 if(allocated(zi))    deallocate(zi)
 !
-memuse = memuse - 4*nsph - 4*ngrid - nbasis*ngrid - nsph-1 - nsph*nngmax - &
-         2*ngrid*nsph - 2*lmax-1 - 2*nbasis
-if (grad) memuse = memuse - 3*ngrid*nsph
+memuse = memuse - 4*nsph - 4*settings%ngrid - nbasis*settings%ngrid - nsph-1 - nsph*nngmax - &
+         2*settings%ngrid*nsph - 2*settings%lmax-1 - 2*nbasis
+if (grad) memuse = memuse - 3*settings%ngrid*nsph
 end subroutine memfree
 !
 real(8) function sprod(n,u,v)
@@ -408,11 +415,11 @@ end function dfsw
 !
 subroutine ptcart(label,ncol,icol,x)
 !
-! dump an array (ngrid,ncol) or just a column.
+! dump an array (settings%ngrid,ncol) or just a column.
 !
 character (len=*), intent(in) :: label
 integer, intent(in)           :: ncol, icol
-real(8), dimension(ngrid,ncol), intent(in) :: x
+real(8), dimension(settings%ngrid,ncol), intent(in) :: x
 !
 integer :: ig, noff, nprt, ic, j
 !
@@ -424,7 +431,7 @@ else
   write (iout,'(3x,a)') label
 end if
 if (ncol.eq.1) then
-  do ig = 1, ngrid
+  do ig = 1, settings%ngrid
     write(iout,1000) ig, x(ig,1)
   end do
 !
@@ -433,12 +440,12 @@ else
   nprt = max(ncol - noff,0)
   do ic = 1, nprt, 5
     write(iout,1010) (j, j = ic, ic+4)
-    do ig = 1, ngrid
+    do ig = 1, settings%ngrid
       write(iout,1020) ig, x(ig,ic:ic+4)
     end do
   end do
   write (iout,1010) (j, j = nprt+1, nprt+noff)
-  do ig = 1, ngrid
+  do ig = 1, settings%ngrid
     write(iout,1020) ig, x(ig,nprt+1:nprt+noff)
   end do
 end if
@@ -467,7 +474,7 @@ else
   write (iout,'(3x,a)') label
 end if
 if (ncol.eq.1) then
-  do l = 0, lmax
+  do l = 0, settings%lmax
     ind = l*l + l + 1
     do m = -l, l
       write(iout,1000) l, m, x(ind+m,1)
@@ -479,7 +486,7 @@ else
   nprt = max(ncol - noff,0)
   do ic = 1, nprt, 5
     write(iout,1010) (j, j = ic, ic+4)
-    do l = 0, lmax
+    do l = 0, settings%lmax
       ind = l*l + l + 1
       do m = -l, l
         write(iout,1020) l, m, x(ind+m,ic:ic+4)
@@ -487,7 +494,7 @@ else
     end do
   end do
   write (iout,1010) (j, j = nprt+1, nprt+noff)
-  do l = 0, lmax
+  do l = 0, settings%lmax
     ind = l*l + l + 1
     do m = -l, l
       write(iout,1020) l, m, x(ind+m,nprt+1:nprt+noff)
@@ -507,11 +514,11 @@ subroutine calcv(first,isph,g,pot,sigma,basloc,vplm,vcos,vsin)
 !
 logical, intent(in) :: first
 integer, intent(in) :: isph
-real(8), dimension(ngrid),       intent(in)    :: g
+real(8), dimension(settings%ngrid),       intent(in)    :: g
 real(8), dimension(nbasis,nsph), intent(in)    :: sigma
-real(8), dimension(ngrid),       intent(inout) :: pot
+real(8), dimension(settings%ngrid),       intent(inout) :: pot
 real(8), dimension(nbasis),      intent(inout) :: basloc, vplm
-real(8), dimension(lmax+1),      intent(inout) :: vcos, vsin
+real(8), dimension(settings%lmax+1),      intent(inout) :: vcos, vsin
 !
 integer :: ig, ij, jsph
 real(8)  :: vij(3), sij(3)
@@ -520,7 +527,7 @@ real(8)  :: vvij, tij, xij, oij
 pot = g
 if (first) return
 !
-do ig = 1, ngrid
+do ig = 1, settings%ngrid
   if (ui(ig,isph).lt.one) then
     do ij = inl(isph), inl(isph+1) - 1
       jsph = nl(ij)
@@ -529,7 +536,7 @@ do ig = 1, ngrid
       tij  = vvij/rsph(jsph)
       if (tij.lt.one) then
         sij  = vij/vvij
-        xij  = fsw(tij,eta*rsph(jsph))
+        xij  = fsw(tij,settings%eta*rsph(jsph))
         if (fi(ig,isph).gt.one) then
           oij = xij/fi(ig,isph)
         else
@@ -547,16 +554,16 @@ end subroutine calcv
 !
 subroutine intrhs(isph,x,xlm)
 integer, intent(in) :: isph
-real(8), dimension(ngrid),  intent(in)    :: x
+real(8), dimension(settings%ngrid),  intent(in)    :: x
 real(8), dimension(nbasis), intent(inout) :: xlm
 !
 integer ig
 xlm = zero
-do ig = 1, ngrid
+do ig = 1, settings%ngrid
   xlm = xlm + basis(:,ig)*w(ig)*x(ig)
 end do
 !
-if (iprint.ge.5) then
+if (settings%iprint.ge.5) then
   call ptcart('pot',1,isph,x)
   call prtsph('vlm',1,isph,xlm)
 end if
@@ -570,7 +577,7 @@ real(8), dimension(nbasis), intent(inout) :: slm
 !
 slm = facl*vlm
 !
-if (iprint.ge.4) call prtsph('slm',1,isph,slm)
+if (settings%iprint.ge.4) call prtsph('slm',1,isph,slm)
 return
 end subroutine solve
 !
@@ -654,7 +661,7 @@ else
   end do
   b(nmat+1,nmat+1) = dot_product(e(:,nmat),e(:,nmat))
 end if
-if (iprint.ge.5) then
+if (settings%iprint.ge.5) then
   do i = 1, nmat + 1
     write(iout,'(21d12.4)') b(1:nmat+1,i)
   end do
@@ -665,7 +672,7 @@ end subroutine makeb
 subroutine ylmbas(x,basloc,vplm,vcos,vsin)
 real(8), dimension(3), intent(in) :: x
 real(8), dimension(nbasis), intent(inout) :: basloc, vplm
-real(8), dimension(lmax+1), intent(inout) :: vcos, vsin
+real(8), dimension(settings%lmax+1), intent(inout) :: vcos, vsin
 !
 integer :: l, m, ind
 real(8)  :: cthe, sthe, cphi, sphi, plm
@@ -701,7 +708,7 @@ call polleg(cthe,sthe,vplm)
 ! now build the spherical harmonics. we will distinguish m=0,
 ! m>0 and m<0:
 !
-do l = 0, lmax
+do l = 0, settings%lmax
   ind = l**2 + l + 1
 ! m = 0
   basloc(ind) = facs(ind)*vplm(ind)
@@ -720,7 +727,7 @@ subroutine dbasis(x,basloc,dbsloc,vplm,vcos,vsin)
 real(8), dimension(3),        intent(in)    :: x
 real(8), dimension(nbasis),   intent(inout) :: basloc, vplm
 real(8), dimension(3,nbasis), intent(inout) :: dbsloc
-real(8), dimension(lmax+1),   intent(inout) :: vcos, vsin
+real(8), dimension(settings%lmax+1),   intent(inout) :: vcos, vsin
 !
 integer :: l, m, ind
 real(8)  :: cthe, sthe, cphi, sphi, plm, fln, pp1, pm1, pp
@@ -774,7 +781,7 @@ call polleg(cthe,sthe,vplm)
 !
 basloc = zero
 dbsloc = zero
-do l = 0, lmax
+do l = 0, settings%lmax
   ind = l*l + l + 1
 ! m = 0
   fln = facs(ind)
@@ -822,16 +829,16 @@ real(8)  :: fact, pmm, somx2, pmm1, pmmo, pll, fm, fl
 fact  = one
 pmm   = one
 somx2 = y
-do m = 0, lmax
+do m = 0, settings%lmax
   ind      = (m + 1)*(m + 1)
   plm(ind) = pmm
-  if(m.eq.lmax) return
+  if(m.eq.settings%lmax) return
   fm = dble(m)
   pmm1 = x*(two*fm + one)*pmm
   ind2 = ind + 2*m + 2
   plm(ind2) = pmm1
   pmmo = pmm
-  do l = m+2, lmax
+  do l = m+2, settings%lmax
     fl = dble(l)
     pll   = (x*(two*fl - one)*pmm1 - (fl + fm - one)*pmm)/(fl - fm)
     ind = l*l + l + 1
@@ -848,7 +855,7 @@ end subroutine polleg
 !
 subroutine trgev(x,y,cx,sx)
 real(8), intent(in) :: x, y
-real(8), dimension(lmax+1), intent(inout) :: cx, sx
+real(8), dimension(settings%lmax+1), intent(inout) :: cx, sx
 !
 integer :: m
 !
@@ -856,7 +863,7 @@ cx(1) = one
 sx(1) = zero
 cx(2) = x
 sx(2) = y
-do m = 3, lmax+1
+do m = 3, settings%lmax+1
   cx(m) = two*x*cx(m-1) - cx(m-2)
   sx(m) = two*x*sx(m-1) - sx(m-2)
 end do
@@ -872,7 +879,7 @@ real(8)  :: tt, ss, fac
 !
 tt = one
 ss = zero
-do l = 0, lmax
+do l = 0, settings%lmax
   ind = l*l + l + 1
   fac = tt/facl(ind)
   ss = ss + fac*dot_product(basloc(ind-l:ind+l),sigma(ind-l:ind+l))
@@ -917,14 +924,14 @@ call system_clock(count=c1)
 !
 ! allocate local variables and set convergence parameters
 !
-fep = (eps-one)/eps
-tol = ten**(-iconv)
-allocate (g(ngrid,nsph),pot(ngrid),vlm(nbasis),sigold(nbasis,nsph))
+fep = (settings%eps-one)/settings%eps
+tol = ten**(-settings%iconv)
+allocate (g(settings%ngrid,nsph),pot(settings%ngrid),vlm(nbasis),sigold(nbasis,nsph))
 sigold = zero
 allocate (delta(nbasis),norm(nsph))
-allocate(vplm(nbasis),basloc(nbasis),vcos(lmax+1),vsin(lmax+1))
-memuse = memuse + ngrid*nsph + ngrid*nproc + 2*nbasis*nproc + nbasis*nsph + &
-         2*nbasis*nproc + 2*(lmax+1)*nproc + nsph
+allocate(vplm(nbasis),basloc(nbasis),vcos(settings%lmax+1),vsin(settings%lmax+1))
+memuse = memuse + settings%ngrid*nsph + settings%ngrid*settings%nproc + 2*nbasis*settings%nproc + nbasis*nsph + &
+         2*nbasis*settings%nproc + 2*(settings%lmax+1)*settings%nproc + nsph
 memmax = max(memmax,memuse)
 !
 ! set up diis:
@@ -962,7 +969,7 @@ do it = 1, nitmax
     ediis(:,:,nmat) = sigma - sigold
     call diis(nbasis*nsph,nmat,xdiis,ediis,bmat,sigma)
   end if
-  if (iprint.gt.1) then
+  if (settings%iprint.gt.1) then
     ene = pt5*fep*sprod(nbasis*nsph,sigma,psi)
     write(iout,1000) it, ene, drms, dmax
   end if
@@ -976,21 +983,21 @@ ene = pt5*fep*sprod(nbasis*nsph,sigma,psi)
 !
 ! free the memory:
 !
-if (iprint.gt.1) write(iout,*)
+if (settings%iprint.gt.1) write(iout,*)
 deallocate (g,pot,vlm,sigold)
 deallocate (delta,norm)
 deallocate (vplm,basloc,vcos,vsin)
 deallocate (xdiis,ediis,bmat)
-memuse = memuse - ngrid*nsph - ngrid*nproc - 2*nbasis*nproc - nbasis*nsph - &
-         2*nbasis*nproc - 2*(lmax+1)*nproc - nsph
+memuse = memuse - settings%ngrid*nsph - settings%ngrid*settings%nproc - 2*nbasis*settings%nproc - nbasis*nsph - &
+         2*nbasis*settings%nproc - 2*(settings%lmax+1)*settings%nproc - nsph
 memuse = memuse - 2*nbasis*nsph*ndiis - lenb*lenb
 !
 call system_clock(count=c2)
-if (iprint.gt.0) then
+if (settings%iprint.gt.0) then
   write(iout,1010) '', dble(c2-c1)/dble(cr)
   write(iout,*)
 end if
-if (iprint.ge.3) then
+if (settings%iprint.ge.3) then
   call prtsph('solution to the ddcosmo equations:',nsph,0,sigma)
 end if
 1000 format(' energy at iteration ',i4,': ',f14.7,' error (rms,max):',2f14.7)
@@ -1032,16 +1039,16 @@ call system_clock(count=c1)
 !
 ! allocate local variables and set convergence parameters
 !
-fep = (eps-one)/eps
-tol = ten**(-iconv)
-allocate (g(ngrid,nsph),pot(ngrid),vlm(nbasis),sigold(nbasis,nsph))
+fep = (settings%eps-one)/settings%eps
+tol = ten**(-settings%iconv)
+allocate (g(settings%ngrid,nsph),pot(settings%ngrid),vlm(nbasis),sigold(nbasis,nsph))
 sigold = zero
 allocate (delta(nbasis),norm(nsph))
-allocate(vplm(nbasis),basloc(nbasis),vcos(lmax+1),vsin(lmax+1))
-allocate(xi(ngrid,nsph))
-memuse = memuse + ngrid*nsph + ngrid*nproc + 2*nbasis*nproc + nbasis*nsph + &
-         2*nbasis*nproc + 2*(lmax+1)*nproc + nsph
-memuse = memuse + nsph*ngrid
+allocate(vplm(nbasis),basloc(nbasis),vcos(settings%lmax+1),vsin(settings%lmax+1))
+allocate(xi(settings%ngrid,nsph))
+memuse = memuse + settings%ngrid*nsph + settings%ngrid*settings%nproc + 2*nbasis*settings%nproc + nbasis*nsph + &
+         2*nbasis*settings%nproc + 2*(settings%lmax+1)*settings%nproc + nsph
+memuse = memuse + nsph*settings%ngrid
 memmax = max(memmax,memuse)
 !
 ! set up diis:
@@ -1061,7 +1068,7 @@ do it = 1, nitmax
     xi = zero
 !$omp parallel do default(shared) private(isph,ig)
     do isph = 1, nsph
-      do ig = 1, ngrid
+      do ig = 1, settings%ngrid
         xi(ig,isph) = dot_product(sigold(:,isph),basis(:,ig))
       end do
     end do
@@ -1083,7 +1090,7 @@ do it = 1, nitmax
     ediis(:,:,nmat) = sigma - sigold
     call diis(nbasis*nsph,nmat,xdiis,ediis,bmat,sigma)
   end if
-  if (iprint.gt.1) then
+  if (settings%iprint.gt.1) then
     write(iout,1000) it, zero, drms, dmax
   end if
   if (drms.le.tol) goto 910
@@ -1095,22 +1102,22 @@ stop
 !
 ! free the memory:
 !
-if (iprint.gt.1) write(iout,*)
+if (settings%iprint.gt.1) write(iout,*)
 deallocate(xi)
 deallocate (g,pot,vlm,sigold)
 deallocate (delta,norm)
 deallocate (vplm,basloc,vcos,vsin)
 deallocate (xdiis,ediis,bmat)
-memuse = memuse - ngrid*nsph - ngrid*nproc - 2*nbasis*nproc - nbasis*nsph - &
-         2*nbasis*nproc - 2*(lmax+1)*nproc - nsph
+memuse = memuse - settings%ngrid*nsph - settings%ngrid*settings%nproc - 2*nbasis*settings%nproc - nbasis*nsph - &
+         2*nbasis*settings%nproc - 2*(settings%lmax+1)*settings%nproc - nsph
 memuse = memuse - 2*nbasis*nsph*ndiis - lenb*lenb
 !
 call system_clock(count=c2)
-if (iprint.gt.0) then
+if (settings%iprint.gt.0) then
   write(iout,1010) 'adjoint ', dble(c2-c1)/dble(cr)
   write(iout,*)
 end if
-if (iprint.ge.3) then
+if (settings%iprint.ge.3) then
   call prtsph('solution to the ddcosmo adjoint equations:',nsph,0,sigma)
 end if
 1000 format(' energy at iteration ',i4,': ',f14.7,' error (rms,max):',2f14.7)
@@ -1122,13 +1129,13 @@ end subroutine itsolv_adjoint
 subroutine wghpot(phi,g)
 !
 real(8), dimension(ncav),       intent(in)    :: phi
-real(8), dimension(ngrid,nsph), intent(inout) :: g
+real(8), dimension(settings%ngrid,nsph), intent(inout) :: g
 !
 integer isph, ig, ic
 !
 ic = 0
 do isph = 1, nsph
-  do ig = 1, ngrid
+  do ig = 1, settings%ngrid
     if (ui(ig,isph).ne.zero) then
       ic = ic + 1
       g(ig,isph) = - ui(ig,isph)*phi(ic)
@@ -1149,7 +1156,7 @@ real(8)  :: fac
 ! compute the energy norm of a vector
 !
 unorm = zero
-do l = 0, lmax
+do l = 0, settings%lmax
   ind = l*l + l + 1
   fac = one/(one + dble(l))
   do m = -l, l
@@ -1168,10 +1175,10 @@ subroutine adjrhs(first,isph,psi,xi,vlm,basloc,vplm,vcos,vsin)
 logical,                       intent(in)    :: first
 integer,                       intent(in)    :: isph
 real(8), dimension(nbasis),     intent(in)    :: psi
-real(8), dimension(ngrid,nsph), intent(in)    :: xi
+real(8), dimension(settings%ngrid,nsph), intent(in)    :: xi
 real(8), dimension(nbasis),     intent(inout) :: vlm
 real(8), dimension(nbasis),     intent(inout) :: basloc, vplm
-real(8), dimension(lmax+1),     intent(inout) :: vcos, vsin
+real(8), dimension(settings%lmax+1),     intent(inout) :: vcos, vsin
 !
 integer :: ij, jsph, ig, l, ind, m
 real(8)  :: vji(3), vvji, tji, sji(3), xji, oji, fac, ffac, t
@@ -1180,13 +1187,13 @@ if (first) return
 !
 do ij = inl(isph), inl(isph+1) - 1
   jsph = nl(ij)
-  do ig = 1, ngrid
+  do ig = 1, settings%ngrid
     vji  = csph(:,jsph) + rsph(jsph)*grid(:,ig) - csph(:,isph)
     vvji = sqrt(dot_product(vji,vji))
     tji  = vvji/rsph(isph)
     if (tji.lt.one) then
       sji = vji/vvji
-      xji = fsw(tji,eta*rsph(isph))
+      xji = fsw(tji,settings%eta*rsph(isph))
       if (fi(ig,jsph).gt.one) then
         oji = xji/fi(ig,jsph)
       else
@@ -1195,7 +1202,7 @@ do ij = inl(isph), inl(isph+1) - 1
       call ylmbas(sji,basloc,vplm,vcos,vsin)
       t   = one
       fac = w(ig)*xi(ig,jsph)*oji
-      do l = 0, lmax
+      do l = 0, settings%lmax
         ind  = l*l + l + 1
         ffac = fac*t/facl(ind)
         do m = -l, l
@@ -1339,25 +1346,26 @@ subroutine header
              '   permittivity:                           ',f8.2,/,   &
              '   convergence threshold:                  ',d8.1,/, &
              '   regularization parameter:               ',f8.2,/)
-if (iprint.gt.0) write(iout,1000)
-if (iprint.gt.0) write(iout,1010) ngrid, nsph, lmax, eps, 10.0d0**(-iconv), eta
+if (settings%iprint.gt.0) write(iout,1000)
+if (settings%iprint.gt.0) write(iout,1010) settings%ngrid, nsph, settings%lmax, &
+     settings%eps, 10.0d0**(-settings%iconv), settings%eta
 return
 end subroutine header
 !
 subroutine fdoka(isph,sigma,xi,basloc,dbsloc,vplm,vcos,vsin,fx)
 integer,                         intent(in)    :: isph
 real(8),  dimension(nbasis,nsph), intent(in)    :: sigma
-real(8),  dimension(ngrid),       intent(in)    :: xi
+real(8),  dimension(settings%ngrid),       intent(in)    :: xi
 real(8),  dimension(nbasis),      intent(inout) :: basloc, vplm
 real(8),  dimension(3,nbasis),    intent(inout) :: dbsloc
-real(8),  dimension(lmax+1),      intent(inout) :: vcos, vsin
+real(8),  dimension(settings%lmax+1),      intent(inout) :: vcos, vsin
 real(8),  dimension(3),           intent(inout) :: fx
 !
 integer :: ig, ij, jsph, l, ind, m
 real(8)  :: vvij, tij, xij, oij, t, fac, fl, f1, f2, f3, beta
 real(8)  :: vij(3), sij(3), alp(3), va(3)
 !
-do ig = 1, ngrid
+do ig = 1, settings%ngrid
   va = zero
   do ij = inl(isph), inl(isph+1) - 1
     jsph = nl(ij)
@@ -1369,7 +1377,7 @@ do ig = 1, ngrid
     call dbasis(sij,basloc,dbsloc,vplm,vcos,vsin)
     alp  = zero
     t    = one
-    do l = 1, lmax
+    do l = 1, settings%lmax
       ind = l*l + l + 1
       fl  = dble(l)
       fac = t/facl(ind)
@@ -1381,7 +1389,7 @@ do ig = 1, ngrid
       t = t*tij
     end do
     beta = intmlp(tij,sigma(:,jsph),basloc)
-    xij = fsw(tij,eta*rsph(jsph))
+    xij = fsw(tij,settings%eta*rsph(jsph))
     if (fi(ig,isph).gt.one) then
       oij = xij/fi(ig,isph)
       f2  = -oij/fi(ig,isph)
@@ -1391,8 +1399,8 @@ do ig = 1, ngrid
     end if
     f1 = oij/rsph(jsph)
     va(:) = va(:) + f1*alp(:) + beta*f2*zi(:,ig,isph)
-    if (tij .gt. (one-eta*rsph(jsph))) then
-      f3 = beta*dfsw(tij,eta*rsph(jsph))/rsph(jsph)
+    if (tij .gt. (one-settings%eta*rsph(jsph))) then
+      f3 = beta*dfsw(tij,settings%eta*rsph(jsph))/rsph(jsph)
       if (fi(ig,isph).gt.one) f3 = f3/fi(ig,isph)
       va(:) = va(:) + f3*sij(:)
     end if
@@ -1405,10 +1413,10 @@ end subroutine fdoka
 subroutine fdokb(isph,sigma,xi,basloc,dbsloc,vplm,vcos,vsin,fx)
 integer,                         intent(in)    :: isph
 real(8),  dimension(nbasis,nsph), intent(in)    :: sigma
-real(8),  dimension(ngrid,nsph),  intent(in)    :: xi
+real(8),  dimension(settings%ngrid,nsph),  intent(in)    :: xi
 real(8),  dimension(nbasis),      intent(inout) :: basloc, vplm
 real(8),  dimension(3,nbasis),    intent(inout) :: dbsloc
-real(8),  dimension(lmax+1),      intent(inout) :: vcos, vsin
+real(8),  dimension(settings%lmax+1),      intent(inout) :: vcos, vsin
 real(8),  dimension(3),           intent(inout) :: fx
 !
 integer :: ig, ji, jsph, l, ind, m, jk, ksph
@@ -1417,7 +1425,7 @@ real(8)  :: vvji, tji, xji, oji, t, fac, fl, f1, f2, beta, di
 real(8)  :: b, g1, g2, vvjk, tjk, xjk
 real(8)  :: vji(3), sji(3), alp(3), vb(3), vjk(3), sjk(3), vc(3)
 !
-do ig = 1, ngrid
+do ig = 1, settings%ngrid
   vb = zero
   vc = zero
   do ji = inl(isph), inl(isph+1) - 1
@@ -1431,7 +1439,7 @@ do ig = 1, ngrid
 !
     alp = zero
     t   = one
-    do l = 1, lmax
+    do l = 1, settings%lmax
       ind = l*l + l + 1
       fl  = dble(l)
       fac = t/facl(ind)
@@ -1442,7 +1450,7 @@ do ig = 1, ngrid
       end do
       t = t*tji
     end do
-    xji = fsw(tji,eta*rsph(isph))
+    xji = fsw(tji,settings%eta*rsph(isph))
     if (fi(ig,jsph).gt.one) then
       oji = xji/fi(ig,jsph)
     else
@@ -1450,7 +1458,7 @@ do ig = 1, ngrid
     end if
     f1 = oji/rsph(isph)
     vb = vb + f1*alp*xi(ig,jsph)
-    if (tji.gt.one-eta*rsph(isph)) then
+    if (tji.gt.one-settings%eta*rsph(isph)) then
       beta = intmlp(tji,sigma(:,isph),basloc)
       if (fi(ig,jsph) .gt. one) then
         di  = one/fi(ig,jsph)
@@ -1468,13 +1476,13 @@ do ig = 1, ngrid
               sjk  = vjk/vvjk
               call ylmbas(sjk,basloc,vplm,vcos,vsin)
               g1  = intmlp(tjk,sigma(:,ksph),basloc)
-              xjk = fsw(tjk,eta*rsph(ksph))
+              xjk = fsw(tjk,settings%eta*rsph(ksph))
               b   = b + g1*xjk
             end if
           end if
         end do
         if (proc) then
-          g1 = di*di*dfsw(tji,eta*rsph(isph))/rsph(isph)
+          g1 = di*di*dfsw(tji,settings%eta*rsph(isph))/rsph(isph)
           g2 = g1*xi(ig,jsph)*b
           vc = vc + g2*sji
         end if
@@ -1482,7 +1490,7 @@ do ig = 1, ngrid
         di  = one
         fac = zero
       end if
-      f2 = (one-fac)*di*dfsw(tji,eta*rsph(isph))/rsph(isph)
+      f2 = (one-fac)*di*dfsw(tji,settings%eta*rsph(isph))/rsph(isph)
       vb = vb + f2*xi(ig,jsph)*beta*sji
     end if
   end do
@@ -1494,14 +1502,14 @@ end subroutine fdokb
 !
 subroutine fdoga(isph,xi,phi,fx)
 integer,                        intent(in)    :: isph
-real(8),  dimension(ngrid,nsph), intent(in)    :: xi, phi
+real(8),  dimension(settings%ngrid,nsph), intent(in)    :: xi, phi
 real(8),  dimension(3),          intent(inout) :: fx
 !
 integer :: ig, ji, jsph
 real(8)  :: vvji, tji, fac, swthr
 real(8)  :: alp(3), vji(3), sji(3)
 !
-do ig = 1, ngrid
+do ig = 1, settings%ngrid
   alp = zero
   if (ui(ig,isph) .gt. zero .and. ui(ig,isph).lt.one) then
     alp = alp + phi(ig,isph)*xi(ig,isph)*zi(:,ig,isph)
@@ -1511,10 +1519,10 @@ do ig = 1, ngrid
     vji   = csph(:,jsph) + rsph(jsph)*grid(:,ig) - csph(:,isph)
     vvji  = sqrt(dot_product(vji,vji))
     tji   = vvji/rsph(isph)
-    swthr = one - eta*rsph(isph)
+    swthr = one - settings%eta*rsph(isph)
     if (tji.lt.one .and. tji.gt.swthr .and. ui(ig,jsph).gt.zero) then
       sji = vji/vvji
-      fac = - dfsw(tji,eta*rsph(isph))/rsph(isph)
+      fac = - dfsw(tji,settings%eta*rsph(isph))/rsph(isph)
       alp = alp + fac*phi(ig,jsph)*xi(ig,jsph)*sji
     end if
   end do

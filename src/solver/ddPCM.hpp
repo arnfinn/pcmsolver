@@ -59,7 +59,15 @@ private:
 };
 
 #define ddinit FortranCInterface_MODULE(ddcosmo, ddinit, DDCOSMO, DDINIT)
-extern "C" void ddinit(const int * n,
+extern "C" void ddinit(const int * iprint, 
+		       const int * nproc, 
+		       const int * lmax, 
+		       const int * ngrid, 
+		       const int * iconv, 
+		       const int * igrad, 
+		       const double * eps, 
+		       const double * eta,
+		       const int * n,
                        const double * x,
                        const double * y,
                        const double * z,
