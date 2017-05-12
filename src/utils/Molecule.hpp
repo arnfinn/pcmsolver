@@ -242,11 +242,15 @@ Eigen::VectorXd computeMEP(const std::vector<cavity::Element> & el,
                            const Eigen::Vector3d & origin = Eigen::Vector3d::Zero());
 
 /*! \brief Compute MEP for a single point charge
- *  \param[in] el  list of finite elements
+ *  \param[in] grid grid points coordinates
  *  \param[in] charge value of the charge
  *  \param[in] origin location of the point charge
- *  \return MEP at finite elements center
+ *  \return MEP at grid points
  */
+Eigen::VectorXd computeMEP(const Eigen::Matrix3Xd & grid,
+                           double charge = 1.0,
+                           const Eigen::Vector3d & origin = Eigen::Vector3d::Zero());
+
 } // namespace pcm
 
 #endif // MOLECULE_HPP

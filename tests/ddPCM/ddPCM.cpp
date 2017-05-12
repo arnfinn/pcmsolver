@@ -36,10 +36,18 @@ using solver::ddPCM;
 
 /*! \class ddPCM
  *
- */
 TEST_CASE("ddCOSMO solver with NH3 molecule", "[ddPCM]") {
   Molecule molec = NH3();
   ddPCM solver(molec);
   Eigen::VectorXd potential = computeMEP(molec, solver.cavity());
   Eigen::MatrixXd charges = solver.computeCharges(potential);
+}
+ */
+
+TEST_CASE("ddCOSMO solver with point charge", "[ddPCM]") {
+  Molecule molec = dummy<0>(1.0);
+  ddPCM solver(molec);
+  Eigen::VectorXd potential = computeMEP(solver.cavity(), 1.0);
+  Eigen::MatrixXd charges = solver.computeCharges(potential);
+  REQUIRE(charges(0,0)*2.0*std::sqrt(M_PI) == Approx(-1).epsilon(1.0e-03));
 }

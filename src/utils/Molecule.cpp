@@ -305,4 +305,17 @@ Eigen::VectorXd computeMEP(const std::vector<Element> & el,
   }
   return mep;
 }
+
+Eigen::VectorXd computeMEP(const Eigen::Matrix3Xd & grid,
+                           double charge,
+                           const Eigen::Vector3d & origin) {
+  Eigen::VectorXd mep = Eigen::VectorXd::Zero(grid.cols());
+  for (size_t i = 0; i < grid.cols(); ++i) {
+    double dist = (origin - grid.col(i)).norm();
+    mep(i) += charge / dist;
+  }
+  return mep;
+}
+
+
 } // namespace pcm
