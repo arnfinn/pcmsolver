@@ -48,6 +48,6 @@ TEST_CASE("ddCOSMO solver with point charge", "[ddPCM]") {
   Molecule molec = dummy<0>(1.0);
   ddPCM solver(molec);
   Eigen::VectorXd potential = computeMEP(solver.cavity(), 1.0);
-  Eigen::MatrixXd charges = solver.computeCharges(potential);
-  REQUIRE(charges(0,0)*2.0*std::sqrt(M_PI) == Approx(-1).epsilon(1.0e-03));
+  Eigen::MatrixXd X = solver.computeX(potential);
+  REQUIRE(X(0,0)*2.0*std::sqrt(M_PI) == Approx(-1).epsilon(1.0e-03));
 }

@@ -40,6 +40,8 @@ ddPCM::ddPCM(const Molecule & m) : nSpheres_(m.spheres().size()), molecule_(m) {
   double eps = 78.39;
   double eta = 0.1;
 
+  Psi_ = detail::Psi((lmax+1)*(lmax+1), nSpheres_, m.charges());
+
   nSpheres_ = m.spheres().size();
   double * xs = new double[nSpheres_];
   double * ys = new double[nSpheres_];
@@ -51,7 +53,20 @@ ddPCM::ddPCM(const Molecule & m) : nSpheres_(m.spheres().size()), molecule_(m) {
     zs[i] = m.spheres(i).center(2);
     rs[i] = m.spheres(i).radius;
   }
-  ddinit(&iprint, &nproc, &lmax, &ngrid, &iconv, &igrad, &eps, &eta, &nSpheres_, xs, ys, zs, rs, &ncav);
+  ddinit(&iprint,
+         &nproc,
+         &lmax,
+         &ngrid,
+         &iconv,
+         &igrad,
+         &eps,
+         &eta,
+         &nSpheres_,
+         xs,
+         ys,
+         zs,
+         rs,
+         &ncav);
   cavity_ = Eigen::Matrix3Xd::Zero(3, ncav);
   copy_cavity(cavity_.data());
   delete[] xs;
@@ -62,16 +77,34 @@ ddPCM::ddPCM(const Molecule & m) : nSpheres_(m.spheres().size()), molecule_(m) {
 
 ddPCM::~ddPCM() { memfree(); }
 
-Eigen::MatrixXd ddPCM::computeCharges(const Eigen::VectorXd & phi) const {
+Eigen::MatrixXd ddPCM::computeX(const Eigen::VectorXd & phi) const {
   int nbasis = 7 * 7;
-  double ene = 0.0;
-  Eigen::MatrixXd psi = Eigen::MatrixXd::Zero(nbasis, nSpheres_);
-  Eigen::MatrixXd sigma = Eigen::MatrixXd::Zero(nbasis, nSpheres_);
-  for (int i = 0; i < nSpheres_; ++i) {
-    psi(0, i) = std::sqrt(4.0 * M_PI) * molecule_.charges(i);
-  }
-  itsolv_direct(phi.data(), psi.data(), sigma.data(), &ene);
-  return sigma;
+  double Es = 0.0;
+  Eigen::MatrixXd X = Eigen::MatrixXd::Zero(nbasis, nSpheres_);
+  itsolv_direct(phi.data(), Psi_().data(), X.data(), &Es);
+  return X;
 }
+
+namespace detail{
+Psi::Psi(int nBasis, int nSpheres, const Eigen::VectorXd & charge)
+    : PsiDiscrete_(Eigen::MatrixXd::Zero(nBasis, nSpheres)) {
+
+  PCMSOLVER_ASSERT(nSpheres == charge.size());
+  for (int i = 0; i < charge.size(); ++i) {
+    PsiDiscrete_(0, i) = std::sqrt(4.0 * M_PI) * charge(i);
+  }
+}
+
+Eigen::MatrixXd Psi::operator()(int nBasis,
+                                int nSpheres,
+                                const BeckeGrid & grid,
+                                const Eigen::VectorXd & weightRho) const {
+  PCMSOLVER_ASSERT(grid.cols() == weightRho.size());
+
+  Eigen::MatrixXd PsiContinuous = Eigen::MatrixXd::Zero(nBasis, nSpheres);
+
+  return PsiDiscrete_ + PsiContinuous;
+}
+} // namespace detail
 } // namespace solver
 } // namespace pcm
