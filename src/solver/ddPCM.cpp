@@ -67,10 +67,17 @@ Eigen::MatrixXd ddPCM::computeCharges(const Eigen::VectorXd & phi) const {
   double ene = 0.0;
   Eigen::MatrixXd psi = Eigen::MatrixXd::Zero(nbasis, nSpheres_);
   Eigen::MatrixXd sigma = Eigen::MatrixXd::Zero(nbasis, nSpheres_);
+  Eigen::MatrixXd S = Eigen::MatrixXd::Zero(nbasis, nSpheres_);
+  int nll = int(cavity_.cols()/nSpheres_);
+  Eigen::MatrixXd xi = Eigen::MatrixXd::Zero(nSpheres_, nll);
   for (int i = 0; i < nSpheres_; ++i) {
     psi(0, i) = std::sqrt(4.0 * M_PI) * molecule_.charges(i);
   }
+
   itsolv_direct(phi.data(), psi.data(), sigma.data(), &ene);
+  itsolv_adjoint(psi.data(), S.data());
+  compute_xi(S.data(), xi.data());
+
   return sigma;
 }
 } // namespace solver

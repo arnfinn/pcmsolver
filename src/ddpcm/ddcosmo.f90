@@ -125,6 +125,7 @@ public fdokb
 public itsolv_direct
 public itsolv_adjoint
 public memfree
+public compute_xi
 
 contains
 subroutine ddinit(iprint, nproc, lmax, ngrid, iconv, igrad, eps, eta, n, x,y,z,rvdw,ncavsize)
@@ -980,6 +981,7 @@ write(iout,1020)
 stop
 900 continue
 ene = pt5*fep*sprod(nbasis*nsph,sigma,psi)
+
 !
 ! free the memory:
 !
@@ -1531,6 +1533,27 @@ end do
 return
 end subroutine fdoga
 !
+subroutine compute_xi(S, xi)
 
+real(8), dimension(nbasis,nsph), intent(in) :: S
+real(8), dimension(nsph,settings%ngrid), intent(inout) :: xi
+
+integer :: j, n
+
+! Compute xi from equation 40 in JCP 141 p184108 (2014)
+! Needs 
+! - omega (w(:) Lebedev weight)
+! - U (ui(:) the switching factor)
+! - S (from the solution of itsolv_adjoint, L*S = Psi)
+! - Y (basis(:) the spherical harmonics) 
+! 
+
+do j = 1, nsph
+   do n = 1, settings%ngrid
+      xi(j,n) = w(n)*ui(n,j)*sprod(nbasis, S(:,j), basis(:,n))
+   end do
+end do
+
+end subroutine compute_xi
 
 end module ddcosmo
