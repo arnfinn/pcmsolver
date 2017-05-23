@@ -159,6 +159,16 @@ extern "C" void itsolv_direct(const double * phi,
                               double * sigma,
                               double * ene);
 
+#define itsolv_adjoint                                                               \
+  FortranCInterface_MODULE(ddcosmo, itsolv_adjoint, DDCOSMO, ITSOLV_ADJOINT)
+extern "C" void itsolv_adjoint(const double * psi,
+                              double * S);
+
+#define compute_xi                                                                  \
+  FortranCInterface_MODULE(ddcosmo, compute_xi, DDCOSMO, COMPUTE_XI)
+extern "C" void compute_xi(const double * S,
+                              double * xi);
+
 #define memfree FortranCInterface_MODULE(ddcosmo, memfree, DDCOSMO, MEMFREE)
 extern "C" void memfree();
 

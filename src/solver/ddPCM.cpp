@@ -82,6 +82,14 @@ Eigen::MatrixXd ddPCM::computeX(const Eigen::VectorXd & phi) const {
   double Es = 0.0;
   Eigen::MatrixXd X = Eigen::MatrixXd::Zero(nbasis, nSpheres_);
   itsolv_direct(phi.data(), Psi_().data(), X.data(), &Es);
+
+  /* Test computation of xi */
+  Eigen::MatrixXd S = Eigen::MatrixXd::Zero(nbasis, nSpheres_);
+  int nll = int(cavity_.cols()/nSpheres_);
+  Eigen::MatrixXd xi = Eigen::MatrixXd::Zero(nSpheres_, nll);
+  itsolv_adjoint(Psi_().data(), S.data());
+  compute_xi(S.data(), xi.data());
+
   return X;
 }
 
