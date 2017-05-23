@@ -36,6 +36,9 @@
 
 namespace pcm {
 namespace solver {
+
+class Psi;
+
 /*! \file ddPCM.hpp
  *  \class ddPCM
  *  \brief Class wrapper for ddPCM.
@@ -45,48 +48,14 @@ namespace solver {
  *  We use the Non-Virtual Interface idiom.
  */
 
-typedef Eigen::Matrix3Xd BeckeGrid;
-
-namespace detail {
-// TODO Extend to the case of general multipoles
-// \warning Such an extension needs a general cartesian-to-spherical transform
-class Psi {
-  public:
-    Psi() {}
-    Psi(int nBasis, int nSpheres, const Eigen::VectorXd & charge);
-    Eigen::MatrixXd operator()() const { return PsiDiscrete_; }
-    /*! \brief Compute \f$ \Psi \f$ vector for a continous charge distribution
-     *         \f$ \rho \f$ and add on top of the discrete Psi
-     *  \param[in] nBasis
-     *  \param[in] nSpheres
-     *  \param[in] grid Becke grid of points
-     *  \param[in] weightRho product of weights \f$ \tau_{j}\f$ and \f$\rho\f$ values
-     *  \return the multipolar representation of the \f$\Psi\f$ vector over the spheres
-     *
-     *  The \f$ \Psi \f$ vector is needed in the computation of the polarization energy
-     *  and as the right-hand side in the adjoint ddCOSMO equation.
-     *  For continuous charge distributions it is computed as:
-     *  \f[
-     *      [\Psi_j]_l^m = \frac{4\pi}{2l+1}\sum_{n=1}^{N_\mathrm{B}^j}
-     *      \tau^{j}_n\rho(\mathbf{x}^j_n)\frac{x_<^l}{x_>^{l+1}}Y_l^m(\mathbf{s}_n^j)
-     *  \f]
-     */
-    Eigen::MatrixXd operator()(int nBasis,
-                               int nSpheres,
-                               const BeckeGrid & grid,
-                               const Eigen::VectorXd & weightRho) const;
-
-  private:
-    Eigen::MatrixXd PsiDiscrete_;
-};
-} // namespace detail
+typedef Eigen::Matrix<double, 4, Eigen::Dynamic> BeckeGrid;
 
 class ddPCM {
 public:
   ddPCM(const Molecule & m);
   ~ddPCM();
   Eigen::Matrix3Xd cavity() const { return cavity_; }
-  Eigen::MatrixXd computeX(const Eigen::VectorXd & phi) const;
+  Eigen::MatrixXd computeX(const Psi & psi, const Eigen::VectorXd & phi) const;
 
   /*! \brief Compute the intermediate \f$ \eta_n^j \f$ required for the formation of \f$ \mathbf{F}^{s,2} \f$
    *  \param[in] grid Becke grid of points
@@ -106,7 +75,7 @@ public:
    *    \tau_n^j\Omega_{\mu\nu}(\mathbf{x}_n^j)\eta_n^j
    *  \f]
    */
-  Eigen::MatrixXd computeEta(const Eigen::Matrix3Xd & grid,
+  Eigen::MatrixXd computeEta(const BeckeGrid & grid,
                              const Eigen::MatrixXd & X);
   /*! \brief Compute the intermediate \f$ \xi_n^j \f$ required for the formation of \f$ \mathbf{F}^{s,1} \f$
    *  \return The \f$\xi_n^j\f$ indexed over the Lebedev-Laikov points
@@ -123,12 +92,48 @@ public:
    *
    */
   Eigen::MatrixXd computeXi();
+  int nBasis() const { return nBasis_; }
+  int nSpheres() const { return nSpheres_; }
 
 private:
+  int Lmax_;
+  int nBasis_;
   int nSpheres_;
   Molecule molecule_;
   Eigen::Matrix3Xd cavity_;
-  detail::Psi Psi_;
+};
+
+// TODO Extend to the case of general multipoles
+// \warning Such an extension needs a general cartesian-to-spherical transform
+class Psi {
+  public:
+    Psi();
+    Psi(int nBasis, int nSpheres, const Eigen::VectorXd & charge);
+    Eigen::MatrixXd operator()() const { return PsiDiscrete_; }
+    /*! \brief Compute \f$ \Psi \f$ vector for a continous charge distribution
+     *         \f$ \rho \f$ and add on top of the discrete Psi
+     *  \param[in] nBasis
+     *  \param[in] nSpheres
+     *  \param[in] grid Becke grid of points
+     *  \param[in] weightRho product of weights \f$ \tau_{j}\f$ and \f$\rho\f$ values
+     *  \return the multipolar representation of the \f$\Psi\f$ vector over the
+     *  spheres
+     *
+     *  The \f$ \Psi \f$ vector is needed in the computation of the polarization
+     *energy
+     *  and as the right-hand side in the adjoint ddCOSMO equation.
+     *  For continuous charge distributions it is computed as:
+     *  \f[
+     *      [\Psi_j]_l^m = \frac{4\pi}{2l+1}\sum_{n=1}^{N_\mathrm{B}^j}
+     *      \tau^{j}_n\rho(\mathbf{x}^j_n)\frac{x_<^l}{x_>^{l+1}}Y_l^m(\mathbf{s}_n^j)
+     *  \f]
+     */
+    Eigen::MatrixXd operator()(const BeckeGrid & grid,
+                               const Eigen::VectorXd & weightRho) const;
+  private:
+    int nBasis_;
+    int nSpheres_;
+    Eigen::MatrixXd PsiDiscrete_;
 };
 
 // TODO Consider injecting the Ledeved-Laikov grid inside ddCOSMO
