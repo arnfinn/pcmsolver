@@ -1559,7 +1559,7 @@ end subroutine compute_xi
 
 subroutine compute_harmonic_extension_psi(psi, taurho, snj, x_lt, x_gt)
 
-  real(8), dimension(nbasis, nsph), intent(inout) :: psi
+  real(8), dimension(nbasis), intent(inout) :: psi
   real(8), intent(in) :: taurho
   real(8), dimension(3), intent(in) :: snj
   real(8), intent(in) :: x_lt

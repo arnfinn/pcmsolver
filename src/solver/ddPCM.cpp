@@ -126,7 +126,7 @@ Eigen::MatrixXd Psi::operator()(const std::vector<Sphere> & spheres,
       }
       // Pass: normalized Becke point, weightRho, x_lt and x_gt
       double taurho = weightRho(n);
-      compute_harmonic_extension_psi(PsiContinuous.data(), &taurho, x.normalized().data(), &x_lt, &x_gt);
+      compute_harmonic_extension_psi(PsiContinuous.col(j).data(), &taurho, x.normalized().data(), &x_lt, &x_gt);
     }
   }
 
