@@ -30,9 +30,11 @@
 #include "utils/Molecule.hpp"
 #include "TestingMolecules.hpp"
 #include "solver/ddPCM.hpp"
+#include "utils/MathUtils.hpp"
 
 using namespace pcm;
 using solver::ddPCM;
+using solver::Psi;
 
 /*! \class ddPCM
  *
@@ -47,7 +49,13 @@ TEST_CASE("ddCOSMO solver with NH3 molecule", "[ddPCM]") {
 TEST_CASE("ddCOSMO solver with point charge", "[ddPCM]") {
   Molecule molec = dummy<0>(1.0);
   ddPCM solver(molec);
+  Psi psi(solver.nBasis(), solver.nSpheres(), molec.charges());
+  // Read Becke grid from file
+  Eigen::MatrixXd becke = cnpy::custom::npy_load<double>("grid.npy");
+  // Compute Psi vector on Becke grid
+  Eigen::VectorXd taurho = Eigen::VectorXd::Zero(becke.cols());
+  psi(becke, taurho);
   Eigen::VectorXd potential = computeMEP(solver.cavity(), 1.0);
-  Eigen::MatrixXd X = solver.computeX(potential);
+  Eigen::MatrixXd X = solver.computeX(psi, potential);
   REQUIRE(X(0,0)*2.0*std::sqrt(M_PI) == Approx(-1).epsilon(1.0e-03));
 }
