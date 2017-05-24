@@ -64,4 +64,9 @@ TEST_CASE("ddCOSMO solver with point charge", "[ddPCM]") {
   solver::compute_eta(eta.data(), &n, becke.block(0,0,3,n).data(), X.data());
 
   REQUIRE(X(0,0)*2.0*std::sqrt(M_PI) == Approx(-1).epsilon(1.0e-03));
+  REQUIRE(X.sum()*2.0*std::sqrt(M_PI) == Approx(-1).epsilon(1.0e-03));
+
+  // eta-value per commit 7a47c934f9
+  REQUIRE(eta(0,0) == Approx(-0.0768098).epsilon(1.0e-05));
+  REQUIRE(eta.sum() == Approx(-0.0768098).epsilon(1.0e-05));
 }
