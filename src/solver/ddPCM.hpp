@@ -25,6 +25,7 @@
 #define DDPCM_HPP
 
 #include <iosfwd>
+#include <vector>
 
 #include "Config.hpp"
 
@@ -32,6 +33,7 @@
 
 #include <Eigen/Core>
 
+#include "utils/Sphere.hpp"
 #include "utils/Molecule.hpp"
 
 namespace pcm {
@@ -128,7 +130,8 @@ class Psi {
      *      \tau^{j}_n\rho(\mathbf{x}^j_n)\frac{x_<^l}{x_>^{l+1}}Y_l^m(\mathbf{s}_n^j)
      *  \f]
      */
-    Eigen::MatrixXd operator()(const BeckeGrid & grid,
+    Eigen::MatrixXd operator()(const std::vector<Sphere> & spheres,
+                               const BeckeGrid & grid,
                                const Eigen::VectorXd & weightRho) const;
   private:
     int nBasis_;
@@ -173,6 +176,17 @@ extern "C" void itsolv_adjoint(const double * psi,
   FortranCInterface_MODULE(ddcosmo, compute_xi, DDCOSMO, COMPUTE_XI)
 extern "C" void compute_xi(const double * S,
                               double * xi);
+
+#define compute_harmonic_extension_psi                                              \
+  FortranCInterface_MODULE(ddcosmo,                                                 \
+                           compute_harmonic_extension_psi,                          \
+                           DDCOSMO,                                                 \
+                           COMPUTE_HARMONIC_EXTENSION_PSI)
+extern "C" void compute_harmonic_extension_psi(double * psi,
+                                               const double * taurho,
+                                               const double * snj,
+                                               const double * x_lt,
+                                               const double * x_gt);
 
 #define memfree FortranCInterface_MODULE(ddcosmo, memfree, DDCOSMO, MEMFREE)
 extern "C" void memfree();

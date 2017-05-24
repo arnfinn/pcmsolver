@@ -126,6 +126,7 @@ public itsolv_direct
 public itsolv_adjoint
 public memfree
 public compute_xi
+public compute_harmonic_extension_psi
 
 contains
 subroutine ddinit(iprint, nproc, lmax, ngrid, iconv, igrad, eps, eta, n, x,y,z,rvdw,ncavsize)
@@ -1541,12 +1542,12 @@ real(8), dimension(nsph,settings%ngrid), intent(inout) :: xi
 integer :: j, n
 
 ! Compute xi from equation 40 in JCP 141 p184108 (2014)
-! Needs 
+! Needs
 ! - omega (w(:) Lebedev weight)
 ! - U (ui(:) the switching factor)
 ! - S (from the solution of itsolv_adjoint, L*S = Psi)
-! - Y (basis(:) the spherical harmonics) 
-! 
+! - Y (basis(:) the spherical harmonics)
+!
 
 do j = 1, nsph
    do n = 1, settings%ngrid
@@ -1555,5 +1556,15 @@ do j = 1, nsph
 end do
 
 end subroutine compute_xi
+
+subroutine compute_harmonic_extension_psi(psi, taurho, snj, x_lt, x_gt)
+
+  real(8), dimension(nbasis, nsph), intent(inout) :: psi
+  real(8), intent(in) :: taurho
+  real(8), dimension(3), intent(in) :: snj
+  real(8), intent(in) :: x_lt
+  real(8), intent(in) :: x_gt
+
+end subroutine compute_harmonic_extension_psi
 
 end module ddcosmo
