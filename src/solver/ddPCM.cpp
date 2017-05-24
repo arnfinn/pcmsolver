@@ -76,16 +76,16 @@ ddPCM::ddPCM(const Molecule & m) : nSpheres_(m.spheres().size()), molecule_(m) {
 
 ddPCM::~ddPCM() { memfree(); }
 
-Eigen::MatrixXd ddPCM::computeX(const Psi & psi, const Eigen::VectorXd & phi) const {
+Eigen::MatrixXd ddPCM::computeX(const Eigen::MatrixXd & psi, const Eigen::VectorXd & phi) const {
   double Es = 0.0;
   Eigen::MatrixXd X = Eigen::MatrixXd::Zero(nBasis_, nSpheres_);
-  itsolv_direct(phi.data(), psi().data(), X.data(), &Es);
+  itsolv_direct(phi.data(), psi.data(), X.data(), &Es);
 
   /* Test computation of xi */
   Eigen::MatrixXd S = Eigen::MatrixXd::Zero(nBasis_, nSpheres_);
   int nll = int(cavity_.cols()/nSpheres_); // Number of Lebedev-Laikov grid points
   Eigen::MatrixXd xi = Eigen::MatrixXd::Zero(nSpheres_, nll);
-  itsolv_adjoint(psi().data(), S.data());
+  itsolv_adjoint(psi.data(), S.data());
   compute_xi(S.data(), xi.data());
 
   return X;
@@ -102,14 +102,14 @@ Psi::Psi(int nBasis, int nSpheres, const Eigen::VectorXd & charge)
   }
 }
 
-Eigen::MatrixXd Psi::operator()(const BeckeGrid & grid,
+Eigen::MatrixXd Psi::operator()(const Eigen::Matrix3Xd & grid,
                                 const Eigen::VectorXd & weightRho) const {
-  PCMSOLVER_ASSERT(grid.cols() == weightRho.size());
-  Eigen::MatrixXd PsiContinuous = Eigen::MatrixXd::Zero(nBasis_, nSpheres_);
   int nBeckePoints = grid.cols();
+  PCMSOLVER_ASSERT(nBeckePoints == weightRho.size());
+  Eigen::MatrixXd PsiContinuous = Eigen::MatrixXd::Zero(nBasis_, nSpheres_);
   compute_harmonic_extension_psi(PsiContinuous.data(),
                                  &nBeckePoints,
-                                 grid.block(0, 0, 3, nBeckePoints).data(),
+                                 grid.data(),
                                  weightRho.data());
   return PsiDiscrete_ + PsiContinuous;
 }

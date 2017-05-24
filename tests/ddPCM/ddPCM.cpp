@@ -46,22 +46,39 @@ TEST_CASE("ddCOSMO solver with NH3 molecule", "[ddPCM]") {
 }
  */
 
+double rho_1s(const Eigen::Vector3d & point) {
+  return (1.0/std::sqrt(2.0 * M_PI) * std::exp(-point.squaredNorm()));
+}
+
 TEST_CASE("ddCOSMO solver with point charge", "[ddPCM]") {
   Molecule molec = dummy<0>(1.0);
   ddPCM solver(molec);
+
+  // Electrostatic potential at the cavity
+  Eigen::VectorXd phi = computeMEP(solver.cavity(), 1.0);
+
+  // Compute psi vector for the point charge
   Psi psi(solver.nBasis(), solver.nSpheres(), molec.charges());
+  // Compute X for classical point charge
+  Eigen::MatrixXd X = solver.computeX(psi(), phi);
+  // Gauss' Theorem check
+  REQUIRE(X(0,0)*2.0*std::sqrt(M_PI) == Approx(-1).epsilon(1.0e-03));
+
   // Read Becke grid from file
-  Eigen::MatrixXd becke = cnpy::custom::npy_load<double>("grid.npy");
-  // Compute Psi vector on Becke grid
-  Eigen::VectorXd taurho = Eigen::VectorXd::Zero(becke.cols());
-  psi(becke, taurho);
-  Eigen::VectorXd potential = computeMEP(solver.cavity(), 1.0);
-  Eigen::MatrixXd X = solver.computeX(psi, potential);
+  // tmp contains grid points and weights
+  Eigen::MatrixXd tmp = cnpy::custom::npy_load<double>("grid.npy");
+  int nBeckePoints = tmp.cols();
+  Eigen::Matrix3Xd beckeGrid = tmp.block(0, 0, 3, nBeckePoints);
+  Eigen::VectorXd beckeWeight = tmp.row(3).transpose();
+  // Sample density of a 1s Gaussian function on on Becke grid
+  Eigen::VectorXd taurho = Eigen::VectorXd::Zero(nBeckePoints);
+  for (int i = 0; i < nBeckePoints; ++i){
+    taurho(i) = rho_1s(beckeGrid.col(i)) * beckeWeight(i);
+  }
+  // Compute X with full Psi vector
+  X = solver.computeX(psi(beckeGrid, taurho), phi);
 
   // Compute eta (not used in test)
-  Eigen::MatrixXd eta = Eigen::MatrixXd::Zero(1, becke.cols());
-  int n = becke.cols();
-  solver::compute_eta(eta.data(), &n, becke.block(0,0,3,n).data(), X.data());
-
-  REQUIRE(X(0,0)*2.0*std::sqrt(M_PI) == Approx(-1).epsilon(1.0e-03));
+  Eigen::MatrixXd eta = Eigen::MatrixXd::Zero(molec.spheres().size(), nBeckePoints);
+  solver::compute_eta(eta.data(), &nBeckePoints, beckeGrid.data(), X.data());
 }

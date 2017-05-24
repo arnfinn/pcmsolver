@@ -50,14 +50,12 @@ class Psi;
  *  We use the Non-Virtual Interface idiom.
  */
 
-typedef Eigen::Matrix<double, 4, Eigen::Dynamic> BeckeGrid;
-
 class ddPCM {
 public:
   ddPCM(const Molecule & m);
   ~ddPCM();
   Eigen::Matrix3Xd cavity() const { return cavity_; }
-  Eigen::MatrixXd computeX(const Psi & psi, const Eigen::VectorXd & phi) const;
+  Eigen::MatrixXd computeX(const Eigen::MatrixXd & psi, const Eigen::VectorXd & phi) const;
 
   /*! \brief Compute the intermediate \f$ \eta_n^j \f$ required for the formation of \f$ \mathbf{F}^{s,2} \f$
    *  \param[in] grid Becke grid of points
@@ -77,8 +75,8 @@ public:
    *    \tau_n^j\Omega_{\mu\nu}(\mathbf{x}_n^j)\eta_n^j
    *  \f]
    */
-  Eigen::MatrixXd computeEta(const BeckeGrid & grid,
-                             const Eigen::MatrixXd & X);
+  Eigen::MatrixXd computeEta(const Eigen::Matrix3Xd & grid,
+                             const Eigen::MatrixXd & X) const;
   /*! \brief Compute the intermediate \f$ \xi_n^j \f$ required for the formation of \f$ \mathbf{F}^{s,1} \f$
    *  \return The \f$\xi_n^j\f$ indexed over the Lebedev-Laikov points
    *  \note This requires no input from outside, since it is calculated entirely Fortran-side:
@@ -130,7 +128,7 @@ class Psi {
      *      \tau^{j}_n\rho(\mathbf{x}^j_n)\frac{x_<^l}{x_>^{l+1}}Y_l^m(\mathbf{s}_n^j)
      *  \f]
      */
-    Eigen::MatrixXd operator()(const BeckeGrid & grid,
+    Eigen::MatrixXd operator()(const Eigen::Matrix3Xd & grid,
                                const Eigen::VectorXd & weightRho) const;
 
   private:
