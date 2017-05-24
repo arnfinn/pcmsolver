@@ -127,6 +127,7 @@ public itsolv_adjoint
 public memfree
 public compute_xi
 public compute_harmonic_extension_psi
+public compute_eta
 
 contains
 subroutine ddinit(iprint, nproc, lmax, ngrid, iconv, igrad, eps, eta, n, x,y,z,rvdw,ncavsize)
@@ -1535,13 +1536,14 @@ return
 end subroutine fdoga
 !
 subroutine compute_xi(S, xi)
+  ! JPC 141, 184108 (2014), \xi in eq. 39
 
 real(8), dimension(nbasis,nsph), intent(in) :: S
 real(8), dimension(nsph,settings%ngrid), intent(inout) :: xi
 
 integer :: j, n
 
-! Compute xi from equation 40 in JCP 141 p184108 (2014)
+! Compute xi from equation 39 in JCP 141 p184108 (2014)
 ! Needs
 ! - omega (w(:) Lebedev weight)
 ! - U (ui(:) the switching factor)
@@ -1558,6 +1560,7 @@ end do
 end subroutine compute_xi
 
 subroutine compute_harmonic_extension_psi(psi, nbecke, becke, taurho)
+  ! JPC 141, 184108 (2014) eq. 31
 
   real(8), dimension(nbasis, nsph), intent(inout) :: psi
   integer, intent(in) :: nbecke
@@ -1618,5 +1621,67 @@ subroutine compute_harmonic_extension_psi(psi, nbecke, becke, taurho)
   end do
 
 end subroutine compute_harmonic_extension_psi
+
+subroutine compute_eta(eta, nbecke, becke, x)
+  ! JPC 141, 184108 (2014) page 6 (after eq. 37)
+
+  real(8), dimension(nbasis, nsph), intent(inout) :: eta
+  integer, intent(in) :: nbecke
+  real(8), dimension(3, nbecke), intent(in) :: becke
+  real(8), dimension(nbasis, nsph), intent(in) :: x
+
+  integer :: j, n, i, l
+  real(8) :: dist, norm, x_lt, x_gt
+  real(8), dimension(3) :: snj
+  real(8), allocatable :: vplm(:), vcos(:), vsin(:)
+  real(8), allocatable :: becke_basis(:,:)
+
+  ! Build a basis of spherical harmonics at the Becke grid points
+  allocate(vplm(nbasis), vcos(settings%lmax+1), vsin(settings%lmax+1))
+  allocate(becke_basis(nbasis, nbecke))
+  memuse = memuse + settings%nproc*(nbasis + 2*settings%lmax + 2 + nbasis*nbecke)
+  memmax = max(memmax,memuse)
+  !$omp parallel do default(shared) private(i,vplm,vcos,vsin)
+  do i = 1, nbecke
+    norm = sqrt(becke(1, i)**2     &
+      + becke(2, i)**2     &
+      + becke(3, i)**2)
+    snj = becke(:, i) / norm
+    call ylmbas(snj, becke_basis(:, i), vplm, vcos, vsin)
+  end do
+  !$omp end parallel do
+  deallocate(vplm, vcos, vsin)
+  memuse = memuse - settings%nproc*(nbasis + 2*settings%lmax + 2)
+
+  do j = 1, nsph ! Loop over spheres
+     do n = 1, nbecke ! Loop over Becke points
+        ! Calculate distance between sphere center and Becke point
+        dist = sqrt((csph(1, j) - becke(1, n))**2     &
+          + (csph(2, j) - becke(2, n))**2     &
+          + (csph(3, j) - becke(3, n))**2)
+        norm = sqrt(becke(1, n)**2     &
+          + becke(2, n)**2     &
+          + becke(3, n)**2)
+        ! Check Becke point in sphere
+        x_lt = 0.0d0
+        x_gt = 0.0d0
+        ! Set x_lt and x_gt
+        if (dist < rsph(j)) then
+          x_lt = norm
+          x_gt = rsph(j)
+        else
+          x_lt = rsph(j)
+          x_gt = norm
+        end if
+        do i = 1, nbasis ! Loop over spherical harmonics
+           l = int(sqrt(dble(nbasis))) - 1
+           ! Finally fill x vector
+           eta(i, j) = eta(i, j) + (four * pi) / (two * dble(l) + one) * (x_lt**l)/(x_gt**(l+1)) * becke_basis(nbasis, n) * x(i, j)
+        end do
+    end do
+  end do
+
+end subroutine compute_eta
+
 
 end module ddcosmo

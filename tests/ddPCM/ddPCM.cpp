@@ -57,5 +57,11 @@ TEST_CASE("ddCOSMO solver with point charge", "[ddPCM]") {
   psi(becke, taurho);
   Eigen::VectorXd potential = computeMEP(solver.cavity(), 1.0);
   Eigen::MatrixXd X = solver.computeX(psi, potential);
+
+  // Compute eta (not used in test)
+  Eigen::MatrixXd eta = Eigen::MatrixXd::Zero(1, becke.cols());
+  int n = becke.cols();
+  solver::compute_eta(eta.data(), &n, becke.block(0,0,3,n).data(), X.data());
+
   REQUIRE(X(0,0)*2.0*std::sqrt(M_PI) == Approx(-1).epsilon(1.0e-03));
 }

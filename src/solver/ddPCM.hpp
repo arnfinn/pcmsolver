@@ -187,6 +187,16 @@ extern "C" void compute_harmonic_extension_psi(double * psi,
                                                const double * becke,
                                                const double * taurho);
 
+#define compute_eta                                                                 \
+  FortranCInterface_MODULE(ddcosmo,                                                 \
+                           compute_eta,                                             \
+                           DDCOSMO,                                                 \
+                           COMPUTE_ETA)
+extern "C" void compute_eta(double * eta,
+			    const int * nbecke,
+			    const double * becke,
+			    const double * x);
+
 #define memfree FortranCInterface_MODULE(ddcosmo, memfree, DDCOSMO, MEMFREE)
 extern "C" void memfree();
 
