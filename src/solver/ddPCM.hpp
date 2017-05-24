@@ -130,9 +130,9 @@ class Psi {
      *      \tau^{j}_n\rho(\mathbf{x}^j_n)\frac{x_<^l}{x_>^{l+1}}Y_l^m(\mathbf{s}_n^j)
      *  \f]
      */
-    Eigen::MatrixXd operator()(const std::vector<Sphere> & spheres,
-                               const BeckeGrid & grid,
+    Eigen::MatrixXd operator()(const BeckeGrid & grid,
                                const Eigen::VectorXd & weightRho) const;
+
   private:
     int nBasis_;
     int nSpheres_;
@@ -183,10 +183,9 @@ extern "C" void compute_xi(const double * S,
                            DDCOSMO,                                                 \
                            COMPUTE_HARMONIC_EXTENSION_PSI)
 extern "C" void compute_harmonic_extension_psi(double * psi,
-                                               const double * taurho,
-                                               const double * snj,
-                                               const double * x_lt,
-                                               const double * x_gt);
+                                               const int * nbecke,
+                                               const double * becke,
+                                               const double * taurho);
 
 #define memfree FortranCInterface_MODULE(ddcosmo, memfree, DDCOSMO, MEMFREE)
 extern "C" void memfree();

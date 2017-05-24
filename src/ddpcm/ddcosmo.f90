@@ -1557,13 +1557,65 @@ end do
 
 end subroutine compute_xi
 
-subroutine compute_harmonic_extension_psi(psi, taurho, snj, x_lt, x_gt)
+subroutine compute_harmonic_extension_psi(psi, nbecke, becke, taurho)
 
-  real(8), dimension(nbasis), intent(inout) :: psi
-  real(8), intent(in) :: taurho
-  real(8), dimension(3), intent(in) :: snj
-  real(8), intent(in) :: x_lt
-  real(8), intent(in) :: x_gt
+  real(8), dimension(nbasis, nsph), intent(inout) :: psi
+  integer, intent(in) :: nbecke
+  real(8), dimension(3, nbecke), intent(in) :: becke
+  real(8), dimension(nbecke), intent(in) :: taurho
+
+  integer :: j, n, i, l
+  real(8) :: dist, norm, x_lt, x_gt
+  real(8), dimension(3) :: snj
+  real(8), allocatable :: vplm(:), vcos(:), vsin(:)
+  real(8), allocatable :: becke_basis(:,:)
+
+  ! Build a basis of spherical harmonics at the Becke grid points
+  allocate(vplm(nbasis), vcos(settings%lmax+1), vsin(settings%lmax+1))
+  allocate(becke_basis(nbasis, nbecke))
+  memuse = memuse + settings%nproc*(nbasis + 2*settings%lmax + 2 + nbasis*nbecke)
+  memmax = max(memmax,memuse)
+  !$omp parallel do default(shared) private(i,vplm,vcos,vsin)
+  do i = 1, nbecke
+    norm = sqrt(becke(1, i)**2     &
+      + becke(2, i)**2     &
+      + becke(3, i)**2)
+    snj = becke(:, i) / norm
+    call ylmbas(snj, becke_basis(:, i), vplm, vcos, vsin)
+  end do
+  !$omp end parallel do
+  deallocate(vplm, vcos, vsin)
+  memuse = memuse - settings%nproc*(nbasis + 2*settings%lmax + 2)
+
+  do j = 1, nsph ! Loop over spheres
+    do i = 1, nbasis ! Loop over spherical harmonics
+      l = int(sqrt(dble(nbasis))) - 1
+      do n = 1, nbecke ! Loop over Becke points
+        ! Calculate distance between sphere center and Becke point
+        dist = sqrt((csph(1, j) - becke(1, n))**2     &
+          + (csph(2, j) - becke(2, n))**2     &
+          + (csph(3, j) - becke(3, n))**2)
+        norm = sqrt(becke(1, n)**2     &
+          + becke(2, n)**2     &
+          + becke(3, n)**2)
+        ! Check Becke point in sphere
+        x_lt = 0.0d0
+        x_gt = 0.0d0
+        ! Set x_lt and x_gt
+        if (dist < rsph(j)) then
+          x_lt = norm
+          x_gt = rsph(j)
+        else
+          x_lt = rsph(j)
+          x_gt = norm
+        end if
+        ! Finally fill Psi vector
+        psi(i, j) = psi(i, j) + taurho(n) * (x_lt**l)/(x_gt**(l+1)) * becke_basis(nbasis, n)
+      end do
+      ! Multiply by 4pi/(2l+1)
+      psi(i, j) = (four * pi) / (two * dble(l) + one) * psi(i, j)
+    end do
+  end do
 
 end subroutine compute_harmonic_extension_psi
 

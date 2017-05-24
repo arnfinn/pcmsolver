@@ -102,34 +102,15 @@ Psi::Psi(int nBasis, int nSpheres, const Eigen::VectorXd & charge)
   }
 }
 
-Eigen::MatrixXd Psi::operator()(const std::vector<Sphere> & spheres,
-                                const BeckeGrid & grid,
+Eigen::MatrixXd Psi::operator()(const BeckeGrid & grid,
                                 const Eigen::VectorXd & weightRho) const {
   PCMSOLVER_ASSERT(grid.cols() == weightRho.size());
-  PCMSOLVER_ASSERT(spheres.size() == nSpheres_);
   Eigen::MatrixXd PsiContinuous = Eigen::MatrixXd::Zero(nBasis_, nSpheres_);
-  for (int j = 0; j < nSpheres_; ++j) { // Loop over spheres
-    for (int n = 0; n < grid.cols(); ++n) { // Loop over Becke points
-      // Calculate distance between Becke point and center of sphere
-      // A Becke point is a block of size 3, 1 starting at row zero and ending at column n: grid.block<3, 1>(0, n)
-      Eigen::Vector3d x = grid.block<3, 1>(0, n);
-      double dist = (spheres[j].center - x).norm();
-      // Check that Becke point is inside sphere
-      double x_lt = 0.0, x_gt = 0.0;
-      // Set x_< and x_>
-      if (dist < spheres[j].radius) {
-        x_lt = x.norm();
-        x_gt = spheres[j].radius;
-      } else {
-        x_lt = spheres[j].radius;
-        x_gt = x.norm();
-      }
-      // Pass: normalized Becke point, weightRho, x_lt and x_gt
-      double taurho = weightRho(n);
-      compute_harmonic_extension_psi(PsiContinuous.col(j).data(), &taurho, x.normalized().data(), &x_lt, &x_gt);
-    }
-  }
-
+  int nBeckePoints = grid.cols();
+  compute_harmonic_extension_psi(PsiContinuous.data(),
+                                 &nBeckePoints,
+                                 grid.block(0, 0, 3, nBeckePoints).data(),
+                                 weightRho.data());
   return PsiDiscrete_ + PsiContinuous;
 }
 } // namespace solver

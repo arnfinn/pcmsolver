@@ -54,7 +54,7 @@ TEST_CASE("ddCOSMO solver with point charge", "[ddPCM]") {
   Eigen::MatrixXd becke = cnpy::custom::npy_load<double>("grid.npy");
   // Compute Psi vector on Becke grid
   Eigen::VectorXd taurho = Eigen::VectorXd::Zero(becke.cols());
-  psi(molec.spheres(), becke, taurho);
+  psi(becke, taurho);
   Eigen::VectorXd potential = computeMEP(solver.cavity(), 1.0);
   Eigen::MatrixXd X = solver.computeX(psi, potential);
   REQUIRE(X(0,0)*2.0*std::sqrt(M_PI) == Approx(-1).epsilon(1.0e-03));
