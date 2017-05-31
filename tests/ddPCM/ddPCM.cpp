@@ -63,6 +63,7 @@ TEST_CASE("ddCOSMO solver with point charge", "[ddPCM]") {
   Eigen::MatrixXd X = solver.computeX(psi(), phi);
   // Gauss' Theorem check
   REQUIRE(X(0,0)*2.0*std::sqrt(M_PI) == Approx(-1).epsilon(1.0e-03));
+  REQUIRE(X.sum()*2.0*std::sqrt(M_PI) == Approx(-1).epsilon(1.0e-03));
 
   // Read Becke grid from file
   // tmp contains grid points and weights
@@ -81,4 +82,8 @@ TEST_CASE("ddCOSMO solver with point charge", "[ddPCM]") {
   // Compute eta (not used in test)
   Eigen::MatrixXd eta = Eigen::MatrixXd::Zero(molec.spheres().size(), nBeckePoints);
   solver::compute_eta(eta.data(), &nBeckePoints, beckeGrid.data(), X.data());
+
+  // eta-value per commit 7a47c934f9
+  REQUIRE(eta(0,0) == Approx(-0.0768098).epsilon(1.0e-05));
+  REQUIRE(eta.sum() == Approx(-0.0768098).epsilon(1.0e-05));
 }
