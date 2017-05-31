@@ -47,7 +47,7 @@ TEST_CASE("ddCOSMO solver with NH3 molecule", "[ddPCM]") {
  */
 
 double rho_1s(const Eigen::Vector3d & point) {
-  return (1.0/std::sqrt(2.0 * M_PI) * std::exp(-point.squaredNorm()));
+  return (std::exp(-point.squaredNorm()) / (2.0 * M_PI));
 }
 
 TEST_CASE("ddCOSMO solver with point charge", "[ddPCM]") {
