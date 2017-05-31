@@ -51,11 +51,14 @@ double rho_1s(const Eigen::Vector3d & point) {
 }
 
 TEST_CASE("ddCOSMO solver with point charge", "[ddPCM]") {
+
   Molecule molec = dummy<0>(1.443*1.1);
   ddPCM solver(molec);
 
   // Electrostatic potential at the cavity
-  Eigen::VectorXd phi = computeMEP(solver.cavity(), 1.0);
+  //  Eigen::VectorXd phi = computeMEP(solver.cavity(), 1.0);
+  // Electrostatic potential at the cavity read from file
+  Eigen::VectorXd phi = cnpy::custom::npy_load<double>("phi.npy");
 
   // Compute psi vector for the point charge
   Psi psi(solver.nBasis(), solver.nSpheres(), molec.charges());
@@ -80,8 +83,8 @@ TEST_CASE("ddCOSMO solver with point charge", "[ddPCM]") {
   }
   // Compute X with full Psi vector
   X = solver.computeX(psi(beckeGrid, taurho), phi);
-
-  // Compute eta (not used in test)
+  
+  // Compute eta
   Eigen::MatrixXd eta = Eigen::MatrixXd::Zero(molec.spheres().size(), nBeckePoints);
   solver::compute_eta(eta.data(), &nBeckePoints, beckeGrid.data(), X.data());
 
