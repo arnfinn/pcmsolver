@@ -31,14 +31,14 @@ namespace pcm {
 namespace solver {
 ddPCM::ddPCM(const Molecule & m) : nSpheres_(m.spheres().size()), molecule_(m) {
   int ncav = 0;
-  int ngrid = 110;
-  Lmax_ = 6;
+  int ngrid = 302;
+  Lmax_ = 10;
   nBasis_ = (Lmax_ + 1) * (Lmax_ + 1);
   int iconv = 7;
   int igrad = 0;
   int iprint = 2;
   int nproc = 1;
-  double eps = 78.39;
+  double eps = 78.3553;
   double eta = 0.1;
 
   nSpheres_ = m.spheres().size();

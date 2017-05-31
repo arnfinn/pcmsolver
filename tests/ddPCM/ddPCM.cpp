@@ -51,7 +51,7 @@ double rho_1s(const Eigen::Vector3d & point) {
 }
 
 TEST_CASE("ddCOSMO solver with point charge", "[ddPCM]") {
-  Molecule molec = dummy<0>(1.0);
+  Molecule molec = dummy<0>(1.443*1.1);
   ddPCM solver(molec);
 
   // Electrostatic potential at the cavity
@@ -67,7 +67,9 @@ TEST_CASE("ddCOSMO solver with point charge", "[ddPCM]") {
 
   // Read Becke grid from file
   // tmp contains grid points and weights
-  Eigen::MatrixXd tmp = cnpy::custom::npy_load<double>("grid.npy");
+  // Eigen::MatrixXd tmp = cnpy::custom::npy_load<double>("grid.npy");
+  // Read Gaussian grid from file
+  Eigen::MatrixXd tmp = cnpy::custom::npy_load<double>("ggrid.npy");
   int nBeckePoints = tmp.cols();
   Eigen::Matrix3Xd beckeGrid = tmp.block(0, 0, 3, nBeckePoints);
   Eigen::VectorXd beckeWeight = tmp.row(3).transpose();
