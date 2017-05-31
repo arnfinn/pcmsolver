@@ -46,27 +46,37 @@ TEST_CASE("ddCOSMO solver with NH3 molecule", "[ddPCM]") {
 }
  */
 
+double rho(Eigen::Vector3d r){
+  double r2 = r.squaredNorm();
+  return std::exp(-r2)/(2*M_PI);
+}
+
 TEST_CASE("ddCOSMO solver with point charge", "[ddPCM]") {
-  Molecule molec = dummy<0>(1.0);
+  Molecule molec = dummy<0>(1.443*1.1);
   ddPCM solver(molec);
   Psi psi(solver.nBasis(), solver.nSpheres(), molec.charges());
   // Read Becke grid from file
-  Eigen::MatrixXd becke = cnpy::custom::npy_load<double>("grid.npy");
+  //Eigen::MatrixXd becke = cnpy::custom::npy_load<double>("grid.npy");
+  // Read Gaussian grid from file
+  Eigen::MatrixXd becke = cnpy::custom::npy_load<double>("ggrid.npy");
   // Compute Psi vector on Becke grid
   Eigen::VectorXd taurho = Eigen::VectorXd::Zero(becke.cols());
+  for (int i = 0; i < becke.cols(); ++i){
+    taurho(i) = rho(becke.block(0,i,3,1))*becke.col(i)(3);
+  }
   psi(becke, taurho);
   Eigen::VectorXd potential = computeMEP(solver.cavity(), 1.0);
   Eigen::MatrixXd X = solver.computeX(psi, potential);
 
-  // Compute eta (not used in test)
+  // Compute eta 
   Eigen::MatrixXd eta = Eigen::MatrixXd::Zero(1, becke.cols());
   int n = becke.cols();
   solver::compute_eta(eta.data(), &n, becke.block(0,0,3,n).data(), X.data());
 
   REQUIRE(X(0,0)*2.0*std::sqrt(M_PI) == Approx(-1).epsilon(1.0e-03));
-  REQUIRE(X.sum()*2.0*std::sqrt(M_PI) == Approx(-1).epsilon(1.0e-03));
+  REQUIRE(X.sum() == Approx(X(0,0)).epsilon(1.0e-03));
 
   // eta-value per commit 7a47c934f9
   REQUIRE(eta(0,0) == Approx(-0.0768098).epsilon(1.0e-05));
-  REQUIRE(eta.sum() == Approx(-0.0768098).epsilon(1.0e-05));
+  REQUIRE(eta.sum() == Approx(eta(0,0)).epsilon(1.0e-03));
 }

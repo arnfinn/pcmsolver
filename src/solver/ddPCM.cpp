@@ -31,14 +31,14 @@ namespace pcm {
 namespace solver {
 ddPCM::ddPCM(const Molecule & m) : nSpheres_(m.spheres().size()), molecule_(m) {
   int ncav = 0;
-  int ngrid = 110;
-  Lmax_ = 6;
+  int ngrid = 302;
+  Lmax_ = 10;
   nBasis_ = (Lmax_ + 1) * (Lmax_ + 1);
   int iconv = 7;
   int igrad = 0;
   int iprint = 2;
   int nproc = 1;
-  double eps = 78.39;
+  double eps = 78.3553;
   double eta = 0.1;
 
   nSpheres_ = m.spheres().size();
@@ -107,10 +107,12 @@ Eigen::MatrixXd Psi::operator()(const BeckeGrid & grid,
   PCMSOLVER_ASSERT(grid.cols() == weightRho.size());
   Eigen::MatrixXd PsiContinuous = Eigen::MatrixXd::Zero(nBasis_, nSpheres_);
   int nBeckePoints = grid.cols();
+  Eigen::Matrix3Xd tmp = grid.block(0, 0, 3, nBeckePoints);
   compute_harmonic_extension_psi(PsiContinuous.data(),
                                  &nBeckePoints,
-                                 grid.block(0, 0, 3, nBeckePoints).data(),
+                                 tmp.data(),
                                  weightRho.data());
+  
   return PsiDiscrete_ + PsiContinuous;
 }
 } // namespace solver
