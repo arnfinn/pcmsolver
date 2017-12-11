@@ -1,4 +1,4 @@
-/**
+/*
  * PCMSolver, an API for the Polarizable Continuum Model
  * Copyright (C) 2017 Roberto Di Remigio, Luca Frediani and collaborators.
  *
@@ -21,20 +21,21 @@
  * PCMSolver API, see: <http://pcmsolver.readthedocs.io/>
  */
 
-#ifndef VACUUM_HPP
-#define VACUUM_HPP
+#pragma once
 
 #include <iosfwd>
 
 #include "Config.hpp"
 
 #include <Eigen/Core>
+/*! \file Vacuum.hpp */
 
 namespace pcm {
 struct GreenData;
 namespace cavity {
 class Element;
 } // namespace cavity
+
 namespace dielectric_profile {
 struct Uniform;
 } // namespace dielectric_profile
@@ -43,8 +44,11 @@ struct Uniform;
 #include "DerivativeTypes.hpp"
 #include "GreensFunction.hpp"
 
-/*! \file Vacuum.hpp
- *  \class Vacuum
+namespace pcm {
+namespace green {
+template <typename DerivativeTraits = AD_directional>
+
+/*! \class Vacuum
  *  \brief Green's function for vacuum.
  *  \author Luca Frediani and Roberto Di Remigio
  *  \date 2012-2016
@@ -53,10 +57,6 @@ struct Uniform;
 // TODO: * I don't think the ProfilePolicy parameter is needed in this case!
 //       * can we use enable_if (or similar tricks) to avoid implementing useless
 //       functions?
-
-namespace pcm {
-namespace green {
-template <typename DerivativeTraits = AD_directional>
 class Vacuum __final
     : public GreensFunction<DerivativeTraits, dielectric_profile::Uniform> {
 public:
@@ -76,6 +76,7 @@ private:
 
   virtual KernelS exportKernelS_impl() const __override;
   virtual KernelD exportKernelD_impl() const __override;
+  virtual DerivativeProbe exportDerivativeProbe_impl() const __override;
 
   virtual double singleLayer_impl(const Element & e, double factor) const __override;
   virtual double doubleLayer_impl(const Element & e, double factor) const __override;
@@ -94,5 +95,3 @@ struct buildVacuum {
 IGreensFunction * createVacuum(const GreenData & data);
 } // namespace green
 } // namespace pcm
-
-#endif // VACUUM_HPP

@@ -2,11 +2,51 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Documentation building is fully handled _via_ `sphinx-build`: CMake will no longer generate a `doc` build target.
+- Simplified `.travis.yml` and got rid of Conda to handle multiple Python versions.
+
+### Fixed
+
+- Documentation building on ReadTheDocs is fully functional again, thanks @arnfinn :tada: 
+  The build had been failing for a while since docs were generated for all files, including 
+  documentation files from previous build. Besides, source code doxygen blocks were not
+  exctracted when inside namespaces.
+
+## [Version 1.1.11] - 2017-10-25
+
 ### Added
 
 - A Python script, using Matplotlib, to plot the cavity.
   The script can also color-map the finite elements according to the values of
   a surface function.
+- The input learnt to parse the additional `ChargeDistribution` section.
+  It is possible to specify a classical charge distribution of point multipoles.
+  This can be an additional source of electrostatic potential for the calculation
+  of the ASC.
+- Restored compilation for g++ < v5.1.
+- [Ninja](https://ninja-build.org/) can be used as a generator.
+  Notice that at least [CMake 3.7.2](https://cmake.org/cmake/help/v3.7/generator/Ninja.html#fortran-support)
+  **and** the [Kitware-maintained](https://github.com/Kitware/ninja) version of
+  Ninja are required to successfully compile.
+
+### Changed
+
+- Use [`#pragma once`](https://en.wikipedia.org/wiki/Pragma_once) instead of
+  `#ifndef, #define, #endif` to guard against multiple inclusion of header files.
+- The uppercased contents of the `.pcm` input file are written to a temporary
+  file, instead of overwriting the user provided file. The temporary file is
+  removed after it has been parsed. Fixes #91 as noted by @ilfreddy.
+
+### Fixed
+
+- A bug in the initialization of a restart cavity from old `.npz` files.
+  Currently, the `.npz` file saves sphere center, arcs and vertices of each
+  finite element. This information is in fact needed to plot the cavity using
+  the Python script in `tools`. Older `.npz` files did not contain this
+  information and could not be read in. The additional information is read in
+  as arrays of zeros in case it is not present on file.
 
 ## [Version 1.1.10] - 2017-03-27
 
@@ -325,7 +365,8 @@
 
 ## v1.0.0 - 2014-09-30 [YANKED]
 
-[Unreleased]: https://github.com/PCMSolver/pcmsolver/compare/v1.1.10...HEAD
+[Unreleased]: https://github.com/PCMSolver/pcmsolver/compare/v1.1.11..HEAD
+[Version 1.1.11]: https://github.com/PCMSolver/pcmsolver/compare/v1.1.10...v1.1.11
 [Version 1.1.10]: https://github.com/PCMSolver/pcmsolver/compare/v1.1.9...v1.1.10
 [Version 1.1.9]: https://github.com/PCMSolver/pcmsolver/compare/v1.1.8...v1.1.9
 [Version 1.1.8]: https://github.com/PCMSolver/pcmsolver/compare/v1.1.7...v1.1.8

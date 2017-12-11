@@ -1,4 +1,4 @@
-/**
+/*
  * PCMSolver, an API for the Polarizable Continuum Model
  * Copyright (C) 2017 Roberto Di Remigio, Luca Frediani and collaborators.
  *
@@ -24,11 +24,11 @@
 #include "Molecule.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <vector>
-#include <cmath>
-#include <iomanip>
 
 #include "Config.hpp"
 
@@ -38,9 +38,9 @@
 #include <Eigen/Eigenvalues>
 
 #include "Atom.hpp"
-#include "cavity/Element.hpp"
 #include "MathUtils.hpp"
 #include "Symmetry.hpp"
+#include "cavity/Element.hpp"
 
 namespace pcm {
 using cavity::Element;

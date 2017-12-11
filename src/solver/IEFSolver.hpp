@@ -1,4 +1,4 @@
-/**
+/*
  * PCMSolver, an API for the Polarizable Continuum Model
  * Copyright (C) 2017 Roberto Di Remigio, Luca Frediani and collaborators.
  *
@@ -21,8 +21,7 @@
  * PCMSolver API, see: <http://pcmsolver.readthedocs.io/>
  */
 
-#ifndef IEFSOLVER_HPP
-#define IEFSOLVER_HPP
+#pragma once
 
 #include <iosfwd>
 #include <string>
@@ -31,6 +30,8 @@
 #include "Config.hpp"
 
 #include <Eigen/Core>
+
+/*! \file IEFSolver.hpp */
 
 namespace pcm {
 class ICavity;
@@ -41,8 +42,9 @@ struct SolverData;
 
 #include "ISolver.hpp"
 
-/*! \file IEFSolver.hpp
- *  \class IEFSolver
+namespace pcm {
+namespace solver {
+/*! \class IEFSolver
  *  \brief IEFPCM, collocation-based solver
  *  \author Luca Frediani, Roberto Di Remigio
  *  \date 2011, 2015, 2016
@@ -68,9 +70,6 @@ struct SolverData;
  *storing
  *  both T(epsilon) and Rinfinity.
  */
-
-namespace pcm {
-namespace solver {
 class IEFSolver : public ISolver {
 public:
   IEFSolver() {}
@@ -128,5 +127,3 @@ private:
 ISolver * createIEFSolver(const SolverData & data);
 } // namespace solver
 } // namespace pcm
-
-#endif // IEFSOLVER_HPP

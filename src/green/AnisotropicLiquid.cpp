@@ -1,4 +1,4 @@
-/**
+/*
  * PCMSolver, an API for the Polarizable Continuum Model
  * Copyright (C) 2017 Roberto Di Remigio, Luca Frediani and collaborators.
  *
@@ -87,6 +87,16 @@ KernelS AnisotropicLiquid<DerivativeTraits>::exportKernelS_impl() const {
 template <typename DerivativeTraits>
 KernelD AnisotropicLiquid<DerivativeTraits>::exportKernelD_impl() const {
   return pcm::bind(&AnisotropicLiquid<DerivativeTraits>::kernelD,
+                   *this,
+                   pcm::_1,
+                   pcm::_2,
+                   pcm::_3);
+}
+
+template <typename DerivativeTraits>
+DerivativeProbe AnisotropicLiquid<DerivativeTraits>::exportDerivativeProbe_impl()
+    const {
+  return pcm::bind(&AnisotropicLiquid<DerivativeTraits>::derivativeProbe,
                    *this,
                    pcm::_1,
                    pcm::_2,

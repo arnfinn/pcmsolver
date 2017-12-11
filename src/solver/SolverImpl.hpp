@@ -1,4 +1,4 @@
-/**
+/*
  * PCMSolver, an API for the Polarizable Continuum Model
  * Copyright (C) 2017 Roberto Di Remigio, Luca Frediani and collaborators.
  *
@@ -20,6 +20,8 @@
  * For information on the complete list of contributors to the
  * PCMSolver API, see: <http://pcmsolver.readthedocs.io/>
  */
+
+#pragma once
 
 #include <cmath>
 

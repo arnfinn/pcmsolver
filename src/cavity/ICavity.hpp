@@ -1,4 +1,4 @@
-/**
+/*
  * PCMSolver, an API for the Polarizable Continuum Model
  * Copyright (C) 2017 Roberto Di Remigio, Luca Frediani and collaborators.
  *
@@ -21,8 +21,7 @@
  * PCMSolver API, see: <http://pcmsolver.readthedocs.io/>
  */
 
-#ifndef ICAVITY_HPP
-#define ICAVITY_HPP
+#pragma once
 
 #include <iosfwd>
 #include <vector>
@@ -36,9 +35,13 @@
 #include "utils/Sphere.hpp"
 #include "utils/Symmetry.hpp"
 
-/*!
- * \file ICavity.hpp
- * \class ICavity
+/*! \file ICavity.hpp */
+
+namespace pcm {
+using cavity::Element;
+using utils::Sphere;
+
+/*! \class ICavity
  * \brief Abstract Base Class for cavities.
  * \author Krzysztof Mozgawa
  * \date 2011
@@ -46,10 +49,6 @@
  * This class represents a cavity made of spheres, its surface being discretized in
  * terms of finite elements.
  */
-
-namespace pcm {
-using cavity::Element;
-using utils::Sphere;
 class ICavity {
 protected:
   /// List of spheres
@@ -169,5 +168,3 @@ public:
   }
 };
 } // namespace pcm
-
-#endif // ICAVITY_HPP

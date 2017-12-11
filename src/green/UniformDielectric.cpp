@@ -1,4 +1,4 @@
-/**
+/*
  * PCMSolver, an API for the Polarizable Continuum Model
  * Copyright (C) 2017 Roberto Di Remigio, Luca Frediani and collaborators.
  *
@@ -71,6 +71,16 @@ KernelS UniformDielectric<DerivativeTraits>::exportKernelS_impl() const {
 template <typename DerivativeTraits>
 KernelD UniformDielectric<DerivativeTraits>::exportKernelD_impl() const {
   return pcm::bind(&UniformDielectric<DerivativeTraits>::kernelD,
+                   *this,
+                   pcm::_1,
+                   pcm::_2,
+                   pcm::_3);
+}
+
+template <typename DerivativeTraits>
+DerivativeProbe UniformDielectric<DerivativeTraits>::exportDerivativeProbe_impl()
+    const {
+  return pcm::bind(&UniformDielectric<DerivativeTraits>::derivativeProbe,
                    *this,
                    pcm::_1,
                    pcm::_2,

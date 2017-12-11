@@ -1,4 +1,4 @@
-/**
+/*
  * PCMSolver, an API for the Polarizable Continuum Model
  * Copyright (C) 2017 Roberto Di Remigio, Luca Frediani and collaborators.
  *
@@ -21,8 +21,7 @@
  * PCMSolver API, see: <http://pcmsolver.readthedocs.io/>
  */
 
-#ifndef ANISOTROPICLIQUID_HPP
-#define ANISOTROPICLIQUID_HPP
+#pragma once
 
 #include <iosfwd>
 
@@ -30,10 +29,13 @@
 
 #include <Eigen/Core>
 
+/*! \file AnisotropicLiquid.hpp*/
+
 namespace pcm {
 namespace cavity {
 class Element;
 } // namespace cavity
+
 namespace dielectric_profile {
 class Anisotropic;
 } // namespace dielectric_profile
@@ -43,18 +45,16 @@ class Anisotropic;
 #include "GreenData.hpp"
 #include "GreensFunction.hpp"
 
-/*! \file AnisotropicLiquid.hpp
- *  \class AnisotropicLiquid
+namespace pcm {
+namespace green {
+template <typename DerivativeTraits = AD_directional>
+/*! \class AnisotropicLiquid
  *  \brief Green's functions for anisotropic liquid, described by a tensorial
  * permittivity
  *  \author Roberto Di Remigio
  *  \date 2016
  *  \tparam DerivativeTraits evaluation strategy for the function and its derivatives
  */
-
-namespace pcm {
-namespace green {
-template <typename DerivativeTraits = AD_directional>
 class AnisotropicLiquid __final
     : public GreensFunction<DerivativeTraits, dielectric_profile::Anisotropic> {
 public:
@@ -78,6 +78,7 @@ private:
 
   virtual KernelS exportKernelS_impl() const __override;
   virtual KernelD exportKernelD_impl() const __override;
+  virtual DerivativeProbe exportDerivativeProbe_impl() const __override;
 
   __noreturn virtual double singleLayer_impl(const Element & /* e */,
                                              double /* factor */) const __override;
@@ -98,5 +99,3 @@ struct buildAnisotropicLiquid {
 IGreensFunction * createAnisotropicLiquid(const GreenData & data);
 } // namespace green
 } // namespace pcm
-
-#endif // ANISOTROPICLIQUID_HPP

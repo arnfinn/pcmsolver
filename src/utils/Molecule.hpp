@@ -1,4 +1,4 @@
-/**
+/*
  * PCMSolver, an API for the Polarizable Continuum Model
  * Copyright (C) 2017 Roberto Di Remigio, Luca Frediani and collaborators.
  *
@@ -21,16 +21,17 @@
  * PCMSolver API, see: <http://pcmsolver.readthedocs.io/>
  */
 
-#ifndef MOLECULE_HPP
-#define MOLECULE_HPP
+#pragma once
 
 #include <iosfwd>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "Config.hpp"
 
 #include <Eigen/Core>
+
+/*! \file Molecule.hpp */
 
 namespace pcm {
 namespace cavity {
@@ -53,8 +54,7 @@ const std::string rotorTypeList[] = {"Asymmetric",
                                      "Linear",
                                      "Atom"};
 
-/*! \file Molecule.hpp
- *  \class Molecule
+/*! \class Molecule
  *  \brief Class representing a molecule or general aggregate of atoms.
  *  \author Roberto Di Remigio
  *  \date 2014
@@ -252,5 +252,3 @@ Eigen::VectorXd computeMEP(const Eigen::Matrix3Xd & grid,
                            const Eigen::Vector3d & origin = Eigen::Vector3d::Zero());
 
 } // namespace pcm
-
-#endif // MOLECULE_HPP

@@ -1,4 +1,4 @@
-/**
+/*
  * PCMSolver, an API for the Polarizable Continuum Model
  * Copyright (C) 2017 Roberto Di Remigio, Luca Frediani and collaborators.
  *
@@ -29,10 +29,10 @@
 
 #include <Eigen/Core>
 
-#include "utils/cnpy.hpp"
 #include "utils/MathUtils.hpp"
 #include "utils/Sphere.hpp"
 #include "utils/Symmetry.hpp"
+#include "utils/cnpy.hpp"
 
 namespace pcm {
 ICavity::ICavity() : nElements_(0), built(false) {}
@@ -75,9 +75,10 @@ void ICavity::saveCavity(const std::string & fname) {
   cnpy::custom::npz_save(fname, "normals", elementNormal_);
   for (PCMSolverIndex i = 0; i < nElements_; ++i) {
     // Write vertices
-    cnpy::custom::npz_save(fname, "vertices_" + std::to_string(i), elements_[i].vertices());
+    cnpy::custom::npz_save(
+        fname, "vertices_" + pcm::to_string(i), elements_[i].vertices());
     // Write arcs
-    cnpy::custom::npz_save(fname, "arcs_" + std::to_string(i), elements_[i].arcs());
+    cnpy::custom::npz_save(fname, "arcs_" + pcm::to_string(i), elements_[i].arcs());
   }
 }
 
@@ -101,10 +102,15 @@ void ICavity::loadCavity(const std::string & fname) {
     PCMSOLVER_ERROR("elementArea_: incoherent dimensions read in");
   elementArea_ = cnpy::custom::npy_to_eigen<double>(raw_weights);
   // 2. Get the element sphere center
-  cnpy::NpyArray raw_elSphCenter = loaded_cavity["elSphCenter"];
-  if (raw_elSphCenter.shape[1] != nElements_)
-    PCMSOLVER_ERROR("elementSphereCenter_: incoherent dimensions read in");
-  elementSphereCenter_ = cnpy::custom::npy_to_eigen<double>(raw_elSphCenter);
+  if (loaded_cavity.find("elSphCenter") == loaded_cavity.end()) {
+    // Element sphere center was not found on file, fill it up with zeros
+    elementSphereCenter_ = Eigen::Matrix3Xd::Zero(3, nElements_);
+  } else {
+    cnpy::NpyArray raw_elSphCenter = loaded_cavity["elSphCenter"];
+    if (raw_elSphCenter.shape[1] != nElements_)
+      PCMSOLVER_ERROR("elementSphereCenter_: incoherent dimensions read in");
+    elementSphereCenter_ = cnpy::custom::npy_to_eigen<double>(raw_elSphCenter);
+  }
   // 3. Get the element radius
   cnpy::NpyArray raw_elRadius = loaded_cavity["elRadius"];
   if (raw_elRadius.shape[0] != nElements_)
@@ -121,6 +127,9 @@ void ICavity::loadCavity(const std::string & fname) {
     PCMSOLVER_ERROR("elementNormal_: incoherent dimensions read in");
   elementNormal_ = cnpy::custom::npy_to_eigen<double>(raw_normals);
 
+  bool has_arcs = loaded_cavity.find("arcs_0") == loaded_cavity.end() ? false : true;
+  bool has_vertices =
+      loaded_cavity.find("vertices_0") == loaded_cavity.end() ? false : true;
   // Reconstruct the elements_ vector
   for (PCMSolverIndex i = 0; i < nElements_; ++i) {
     bool irr = false;
@@ -130,14 +139,23 @@ void ICavity::loadCavity(const std::string & fname) {
     Sphere sph(elementSphereCenter_.col(i), elementRadius_(i));
     Eigen::Matrix3Xd vertices, arcs;
     // 6. Get vertices and arcs
-    for (PCMSolverIndex i = 0; i < nElements_; ++i) {
-      cnpy::NpyArray raw_vertices = loaded_cavity["vertices_" + std::to_string(i)];
+    if (has_vertices) {
+      cnpy::NpyArray raw_vertices = loaded_cavity["vertices_" + pcm::to_string(i)];
       vertices = cnpy::custom::npy_to_eigen<double>(raw_vertices);
-      cnpy::NpyArray raw_arcs = loaded_cavity["arcs_" + std::to_string(i)];
+    } else {
+      // Vertices were not found on file, fill them up with zeros
+      vertices = Eigen::Matrix3Xd::Zero(3, 3);
+    }
+    if (has_arcs) {
+      cnpy::NpyArray raw_arcs = loaded_cavity["arcs_" + pcm::to_string(i)];
       arcs = cnpy::custom::npy_to_eigen<double>(raw_arcs);
+    } else {
+      // Arcs were not found on file, fill them up with zeros
+      arcs = Eigen::Matrix3Xd::Zero(3, 3);
     }
     if (arcs.cols() != vertices.cols())
-      PCMSOLVER_ERROR("Inconsistent number of vertices read from file for element " + to_string(i));
+      PCMSOLVER_ERROR("Inconsistent number of vertices read from file for element " +
+                      pcm::to_string(i));
     int nv = vertices.cols();
     // Populate vertices and arcs
     elements_.push_back(Element(nv,

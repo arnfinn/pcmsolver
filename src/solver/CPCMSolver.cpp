@@ -1,4 +1,4 @@
-/**
+/*
  * PCMSolver, an API for the Polarizable Continuum Model
  * Copyright (C) 2017 Roberto Di Remigio, Luca Frediani and collaborators.
  *
@@ -34,8 +34,8 @@
 
 #include "SolverData.hpp"
 #include "bi_operators/IBoundaryIntegralOperator.hpp"
-#include "cavity/ICavity.hpp"
 #include "cavity/Element.hpp"
+#include "cavity/ICavity.hpp"
 #include "green/IGreensFunction.hpp"
 #include "utils/MathUtils.hpp"
 

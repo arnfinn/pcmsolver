@@ -1,4 +1,4 @@
-/**
+/*
  * PCMSolver, an API for the Polarizable Continuum Model
  * Copyright (C) 2017 Roberto Di Remigio, Luca Frediani and collaborators.
  *
@@ -21,8 +21,7 @@
  * PCMSolver API, see: <http://pcmsolver.readthedocs.io/>
  */
 
-#ifndef SPHERE_HPP
-#define SPHERE_HPP
+#pragma once
 
 #include <iosfwd>
 #include <string>
@@ -32,15 +31,15 @@
 
 #include <Eigen/Core>
 
-/*! \file Sphere.hpp
- *  \struct Sphere
+/*! \file Sphere.hpp */
+
+namespace pcm {
+namespace utils {
+/*! \struct Sphere
  *  \brief POD describing a sphere.
  *  \author Roberto Di Remigio
  *  \date 2011, 2016
  */
-
-namespace pcm {
-namespace utils {
 struct Sphere {
   Sphere() {}
   Sphere(const Eigen::Vector3d & c, double r) : center(c), radius(r) {}
@@ -55,10 +54,15 @@ struct Sphere {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW /* See
                                      http://eigen.tuxfamily.org/dox/group__TopicStructHavingEigenMembers.html
                                      */
+      friend std::ostream &
+      operator<<(std::ostream & os, Sphere & sph) {
+    os << "Sphere radius " << sph.radius << std::endl;
+    os << "Sphere center " << sph.center.transpose();
+
+    return os;
+  }
 };
 } // namespace utils
-
-std::ostream & operator<<(std::ostream & os, utils::Sphere & sph);
 
 /*! \fn inline void transfer_spheres(const std::vector<Sphere> & spheres,
  *Eigen::Matrix3Xd & sphereCenter, Eigen::VectorXd & sphereRadius)
@@ -73,5 +77,3 @@ void transfer_spheres(const std::vector<utils::Sphere> & spheres,
                       Eigen::Matrix3Xd & sphereCenter,
                       Eigen::VectorXd & sphereRadius);
 } // namespace pcm
-
-#endif // SPHERE_HPP
