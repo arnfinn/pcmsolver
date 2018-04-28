@@ -22,24 +22,24 @@ branches:
     - fix-appveyor
 matrix:
   include:
-#    - os: linux
-#      addons:
-#        apt:
-#          packages:
-#            - cmake3
-#            - cmake3-data
-#            - clang
-#            - clang-format-3.9
-#            - gfortran
-#            - libboost-math-dev
-#      env:
-#        - CXX_COMPILER='clang++'
-#        - C_COMPILER='clang'
-#        - Fortran_COMPILER='gfortran'
-#        - BUILD_TYPE='release'
-#        - PYTHON='--three'
-#        - RUN_DANGER=true
-#        - MAKE_DOC=false
+    - os: linux
+      addons:
+        apt:
+          packages:
+            - cmake3
+            - cmake3-data
+            - clang
+            - clang-format-3.9
+            - gfortran
+            - libboost-math-dev
+      env:
+        - CXX_COMPILER='clang++'
+        - C_COMPILER='clang'
+        - Fortran_COMPILER='gfortran'
+        - BUILD_TYPE='release'
+        - PYTHON='--three'
+        - RUN_DANGER=true
+        - MAKE_DOC=true
     - os: linux
       addons:
         apt:
