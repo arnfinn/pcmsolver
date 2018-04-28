@@ -22,24 +22,24 @@ branches:
     - fix-appveyor
 matrix:
   include:
-    - os: linux
-      addons:
-        apt:
-          packages:
-            - cmake3
-            - cmake3-data
-            - clang
-            - clang-format-3.9
-            - gfortran
-            - libboost-math-dev
-      env:
-        - CXX_COMPILER='clang++'
-        - C_COMPILER='clang'
-        - Fortran_COMPILER='gfortran'
-        - BUILD_TYPE='release'
-        - PYTHON='--three'
-        - RUN_DANGER=true
-        - MAKE_DOC=false
+#    - os: linux
+#      addons:
+#        apt:
+#          packages:
+#            - cmake3
+#            - cmake3-data
+#            - clang
+#            - clang-format-3.9
+#            - gfortran
+#            - libboost-math-dev
+#      env:
+#        - CXX_COMPILER='clang++'
+#        - C_COMPILER='clang'
+#        - Fortran_COMPILER='gfortran'
+#        - BUILD_TYPE='release'
+#        - PYTHON='--three'
+#        - RUN_DANGER=true
+#        - MAKE_DOC=false
     - os: linux
       addons:
         apt:
@@ -58,47 +58,47 @@ matrix:
         - PYTHON='--two'
         - RUN_DANGER=false
         - MAKE_DOC=true
-    - os: linux
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - cmake3
-            - cmake3-data
-            - g++-6
-            - gcc-6
-            - gfortran-6
-            - libboost-math-dev
-      env:
-        - CXX_COMPILER='g++-6'
-        - C_COMPILER='gcc-6'
-        - Fortran_COMPILER='gfortran-6'
-        - BUILD_TYPE='release'
-        - PYTHON='--two'
-        - STATIC='--static'
-        - RUN_DANGER=false
-        - MAKE_DOC=false
-    - os: linux
-      addons:
-        apt:
-          packages:
-            - cmake3
-            - cmake3-data
-            - g++
-            - gcc
-            - gfortran
-            - libboost-math-dev
-            - lcov
-      env:
-        - CXX_COMPILER='g++'
-        - C_COMPILER='gcc'
-        - Fortran_COMPILER='gfortran'
-        - BUILD_TYPE='debug'
-        - PYTHON='--two'
-        - COVERAGE='--coverage'
-        - RUN_DANGER=false
-        - MAKE_DOC=false
+#    - os: linux
+#      addons:
+#        apt:
+#          sources:
+#            - ubuntu-toolchain-r-test
+#          packages:
+#            - cmake3
+#            - cmake3-data
+#            - g++-6
+#            - gcc-6
+#            - gfortran-6
+#            - libboost-math-dev
+#      env:
+#        - CXX_COMPILER='g++-6'
+#        - C_COMPILER='gcc-6'
+#        - Fortran_COMPILER='gfortran-6'
+#        - BUILD_TYPE='release'
+#        - PYTHON='--two'
+#        - STATIC='--static'
+#        - RUN_DANGER=false
+#        - MAKE_DOC=false
+#    - os: linux
+#      addons:
+#        apt:
+#          packages:
+#            - cmake3
+#            - cmake3-data
+#            - g++
+#            - gcc
+#            - gfortran
+#            - libboost-math-dev
+#            - lcov
+#      env:
+#        - CXX_COMPILER='g++'
+#        - C_COMPILER='gcc'
+#        - Fortran_COMPILER='gfortran'
+#        - BUILD_TYPE='debug'
+#        - PYTHON='--two'
+#        - COVERAGE='--coverage'
+#        - RUN_DANGER=false
+#        - MAKE_DOC=false
 before_install:
   - test -n $CC && unset CC
   - test -n $CXX && unset CXX
@@ -115,6 +115,10 @@ before_script:
     if [[ "$RUN_DANGER" = true ]]; then
       bundle install --gemfile=.ci/Gemfile
     fi
+  - |
+    if [[ "$MAKE_DOC" = true ]]; then
+      gem install html-proofer
+    fi
 script:
   - |
     if [[ "$RUN_DANGER" = true ]]; then
@@ -124,6 +128,7 @@ script:
     if [[ "$MAKE_DOC" = true ]]; then
        cd doc
        sphinx-build . _build
+       html-proofer _build/index.html
        cd ..
     fi
   - |
