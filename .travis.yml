@@ -128,7 +128,7 @@ script:
     if [[ "$MAKE_DOC" = true ]]; then
        cd doc
        sphinx-build . _build
-       html-proofer _build/index.html
+       htmlproofer _build/index.html
        cd ..
     fi
   - |
